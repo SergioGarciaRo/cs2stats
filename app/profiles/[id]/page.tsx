@@ -1,0 +1,534 @@
+"use client"
+import { useEffect, useState } from 'react'
+import { useParams, useSearchParams } from 'next/navigation'
+
+function VoteSection({ steamId, name, avatar, initialYes, initialNo }: {
+  steamId: string; name: string; avatar: string; initialYes: number; initialNo: number
+}) {
+  const [yes, setYes] = useState(initialYes)
+  const [no, setNo] = useState(initialNo)
+  const [voted, setVoted] = useState<'yes' | 'no' | 'already' | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  async function vote(v: 'yes' | 'no') {
+    if (loading || voted === 'already') return
+    setLoading(true)
+    const res = await fetch(`/api/vote/${steamId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vote: v, name, avatar }),
+    })
+    const data = await res.json()
+    setYes(data.yes ?? yes)
+    setNo(data.no ?? no)
+    setVoted(res.status === 429 ? 'already' : v)
+    setLoading(false)
+  }
+
+  const total = yes + no
+  const yesPct = total > 0 ? Math.round((yes / total) * 100) : 0
+  const noPct = total > 0 ? 100 - yesPct : 0
+
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
+        Is this player cheating?
+      </div>
+
+      {voted === 'already' ? (
+        <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 8 }}>You already voted on this profile</div>
+      ) : voted ? (
+        <div style={{ fontSize: 13, color: voted === 'yes' ? '#f87171' : '#4ade80', fontWeight: 700, marginBottom: 8 }}>
+          {voted === 'yes' ? '⚠ You voted: Yes, cheater' : '✓ You voted: No, clean player'}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+          <button onClick={() => vote('yes')} disabled={loading} style={{
+            padding: '7px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 13,
+            background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171',
+            opacity: loading ? 0.6 : 1, transition: 'background 0.15s',
+          }}>⚠ Yes, cheater</button>
+          <button onClick={() => vote('no')} disabled={loading} style={{
+            padding: '7px 16px', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 13,
+            background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ade80',
+            opacity: loading ? 0.6 : 1, transition: 'background 0.15s',
+          }}>✓ No, clean</button>
+        </div>
+      )}
+
+      {total > 0 && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>
+            <span style={{ color: '#f87171' }}>Cheater {yesPct}% ({yes})</span>
+            <span style={{ color: '#4ade80' }}>Clean {noPct}% ({no})</span>
+          </div>
+          <div style={{ height: 6, borderRadius: 3, background: 'rgba(34,197,94,0.2)', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${yesPct}%`, background: 'linear-gradient(90deg, #ef4444, #f87171)', borderRadius: 3, transition: 'width 0.4s ease' }} />
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>{total} community vote{total !== 1 ? 's' : ''}</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface Medal {
+  name: string
+  xp: string
+  level: string
+  icon: string
+  unlocked: string
+}
+
+interface ProfileData {
+  profile: {
+    steamId: string
+    name: string | null
+    avatar: string | null
+    visibility: string
+    memberSince: string | null
+    vacBanned: boolean
+    tradeBanState: string | null
+  }
+  cs2: { ok: boolean; hours?: string; reason?: string }
+  risk: string
+  faceit: { level?: number; elo?: number; faceitName?: string; reason?: string } | null
+  medals: { items?: Medal[]; reason?: string } | null
+  inventory: {
+    totalItems?: number
+    marketableItems?: number
+    approximateValueUSD?: number
+    isPartial?: boolean
+    reason?: string
+  } | null
+  leetify?: { aim?: number | null; positioning?: number | null; utility?: number | null; overall?: number | null; reason?: string } | null
+  fetchedAt: number
+  votes?: { yes: number; no: number }
+}
+
+function riskColor(risk: string) {
+  if (risk.includes('high')) return 'var(--danger)'
+  if (risk.includes('elevated')) return 'var(--accent2)'
+  if (risk.includes('unknown')) return '#a78bfa'
+  return 'var(--success)'
+}
+function riskLabel(risk: string) {
+  if (risk.includes('high')) return 'HIGH'
+  if (risk.includes('elevated')) return 'ELEVATED'
+  if (risk.includes('unknown')) return 'UNKNOWN'
+  return 'LOW'
+}
+function riskPct(risk: string) {
+  if (risk.includes('high')) return '90%'
+  if (risk.includes('elevated')) return '60%'
+  if (risk.includes('unknown')) return '40%'
+  return '20%'
+}
+
+export default function ProfilePage() {
+  const params = useParams() as { id: string }
+  const searchParams = useSearchParams()
+  const debug = searchParams?.get('debug') === '1'
+  const [data, setData] = useState<ProfileData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!params.id) return
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    setData(null)
+    fetch(`/api/profile/${params.id}`)
+      .then(async (res) => {
+        const j = await res.json()
+        if (!res.ok) throw new Error(j.error || 'Failed to load profile')
+        if (!cancelled) setData(j)
+      })
+      .catch((e) => { if (!cancelled) setError(e.message || String(e)) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [params.id])
+
+  const faceitLevel = data?.faceit?.level ?? null
+  const faceitElo = data?.faceit?.elo ?? null
+  const faceitName = data?.faceit?.faceitName ?? null
+  const hasFaceit = faceitLevel !== null
+
+  return (
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px' }}>
+      <a href="/" style={{ fontSize: 14, color: 'var(--muted)' }}>← Back</a>
+
+      {loading && (
+        <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--muted)', fontSize: 18 }}>
+          Loading profile...
+        </div>
+      )}
+
+      {!loading && error && (
+        <div className="card" style={{ marginTop: 24, borderLeft: '3px solid var(--danger)' }}>
+          <div style={{ color: 'var(--danger)', fontWeight: 700, marginBottom: 4 }}>Error</div>
+          <div style={{ color: 'var(--muted)' }}>{error}</div>
+        </div>
+      )}
+
+      {!loading && !error && data && (
+        <div>
+          {/* ── Banner sospechoso ───────────────────────────────────── */}
+          {(data.votes?.yes ?? 0) >= 10 && (
+            <div style={{
+              marginTop: 20,
+              padding: '14px 20px',
+              borderRadius: 12,
+              background: 'rgba(239,68,68,0.08)',
+              border: '1px solid rgba(239,68,68,0.35)',
+              display: 'flex', alignItems: 'center', gap: 12,
+            }}>
+              <span style={{ fontSize: 22 }}>⚠️</span>
+              <div>
+                <div style={{ fontWeight: 700, color: '#f87171', fontSize: 14 }}>
+                  Suspected cheater by the community
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>
+                  {data.votes!.yes} players have flagged this profile as suspicious
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Header ─────────────────────────────────────────────── */}
+          <div className="card" style={{ marginTop: 20, display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
+            {data.profile.avatar && (
+              <img src={data.profile.avatar} alt="avatar" className="profile-avatar" />
+            )}
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div className="profile-name">{data.profile.name || 'Unknown Profile'}</div>
+              </div>
+              <div className="profile-id">{data.profile.steamId}</div>
+              {data.profile.memberSince && (
+                <div className="profile-age">Member since: {data.profile.memberSince}</div>
+              )}
+              <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                <span style={{
+                  padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                  background: data.profile.visibility === 'public' ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
+                  color: data.profile.visibility === 'public' ? 'var(--success)' : 'var(--danger)',
+                  border: `1px solid ${data.profile.visibility === 'public' ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)'}`,
+                }}>
+                  {data.profile.visibility === 'public' ? 'Public' : 'Private'}
+                </span>
+                {data.profile.vacBanned && (
+                  <span style={{
+                    padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                    background: 'rgba(239,68,68,0.12)', color: 'var(--danger)',
+                    border: '1px solid rgba(239,68,68,0.25)',
+                  }}>VAC Banned</span>
+                )}
+                {hasFaceit && (
+                  <span style={{
+                    padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                    background: 'rgba(255,122,24,0.15)', color: '#ff7a18',
+                    border: '1px solid rgba(255,122,24,0.3)',
+                  }}>FACEIT Lv.{faceitLevel}</span>
+                )}
+                {(data.votes?.yes ?? 0) > 0 && (
+                  <span style={{
+                    padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                    background: 'rgba(239,68,68,0.12)', color: '#f87171',
+                    border: '1px solid rgba(239,68,68,0.2)',
+                  }}>⚠ {data.votes!.yes} report{data.votes!.yes !== 1 ? 's' : ''}</span>
+                )}
+              </div>
+
+              <VoteSection
+                steamId={data.profile.steamId}
+                name={data.profile.name || 'Unknown'}
+                avatar={data.profile.avatar || ''}
+                initialYes={data.votes?.yes ?? 0}
+                initialNo={data.votes?.no ?? 0}
+              />
+            </div>
+          </div>
+
+          {/* ── Top stats ───────────────────────────────────────────── */}
+          <div className="top-stats">
+            <div className="top-stat-card">
+              <div className="stat-label">Cheating Risk</div>
+              <div className="top-stat-value" style={{ color: riskColor(data.risk) }}>
+                {riskLabel(data.risk)}
+              </div>
+            </div>
+            <div className="top-stat-card">
+              <div className="stat-label">CS2 Hours</div>
+              <div className="top-stat-value">
+                {data.cs2.ok ? data.cs2.hours : '—'}
+              </div>
+              {!data.cs2.ok && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>Private or no data</div>}
+            </div>
+            <div className="top-stat-card">
+              <div className="stat-label">FACEIT Level</div>
+              <div className="top-stat-value" style={{ color: hasFaceit ? '#ff7a18' : 'var(--muted)' }}>
+                {hasFaceit ? faceitLevel : '—'}
+              </div>
+              {faceitElo && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{faceitElo} ELO</div>}
+            </div>
+            <div className="top-stat-card">
+              <div className="stat-label">Leetify Rating</div>
+              <div className="top-stat-value" style={{ color: data.leetify?.overall != null ? '#a78bfa' : 'var(--muted)' }}>
+                {data.leetify?.overall != null ? data.leetify.overall : '—'}
+              </div>
+              {data.leetify?.overall != null && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>overall score</div>}
+            </div>
+          </div>
+
+          {/* ── Grid principal ──────────────────────────────────────── */}
+          <div className="page-grid">
+
+            {/* Columna izquierda */}
+            <div className="left-column">
+              <div className="card">
+                <div className="stat-label">Account Age</div>
+                <div style={{ fontSize: 15, fontWeight: 600, marginTop: 4, color: '#fff' }}>
+                  {data.profile.memberSince || 'Unknown'}
+                </div>
+              </div>
+
+              <div className="card">
+                <div className="stat-label">Cheater Risk</div>
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span style={{ fontSize: 13, color: riskColor(data.risk), fontWeight: 700 }}>{riskLabel(data.risk)}</span>
+                  </div>
+                  <div className="risk-bar">
+                    <div className="risk-bar-inner" style={{ width: riskPct(data.risk), background: riskColor(data.risk) }} />
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>{data.risk}</div>
+                </div>
+              </div>
+
+              <div className="card">
+                <div className="stat-label">VAC Ban</div>
+                <div style={{
+                  marginTop: 4, fontSize: 16, fontWeight: 700,
+                  color: data.profile.vacBanned ? 'var(--danger)' : 'var(--success)',
+                }}>
+                  {data.profile.vacBanned ? 'Banned' : 'Clean'}
+                </div>
+              </div>
+
+              {/* FACEIT card */}
+              {hasFaceit ? (
+                <div className="card" style={{ borderLeft: '3px solid #ff7a18' }}>
+                  <div className="stat-label">FACEIT</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 }}>
+                    <div style={{
+                      width: 48, height: 48, borderRadius: 10,
+                      background: 'linear-gradient(135deg, #ff7a18, #ffba18)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 22, fontWeight: 800, color: '#fff', flexShrink: 0,
+                    }}>{faceitLevel}</div>
+                    <div>
+                      <div style={{ fontWeight: 700, color: '#fff' }}>{faceitName || '—'}</div>
+                      {faceitElo && <div style={{ fontSize: 12, color: '#ff7a18' }}>{faceitElo} ELO</div>}
+                      {faceitName && (
+                        <a href={`https://www.faceit.com/en/players/${faceitName}`} target="_blank" rel="noreferrer" style={{ fontSize: 12 }}>
+                          View on FACEIT →
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="card" style={{ opacity: 0.5 }}>
+                  <div className="stat-label">FACEIT</div>
+                  <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>
+                    {data.faceit?.reason === 'no_api_key'
+                      ? 'Set FACEIT_API_KEY to enable this'
+                      : 'Not found on FACEIT'}
+                  </div>
+                </div>
+              )}
+
+              {/* Inventario CS2 */}
+              {data.inventory && !data.inventory.reason ? (
+                <div className="card" style={{ borderLeft: '3px solid #f59e0b' }}>
+                  <div className="stat-label">CS2 Inventory</div>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: '#f59e0b', marginTop: 8, lineHeight: 1 }}>
+                    ${data.inventory.approximateValueUSD?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '—'}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+                    approx. value{data.inventory.isPartial ? ' (partial, top 40 items)' : ''}
+                  </div>
+                  <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+                    <span style={{ fontSize: 12, color: 'var(--muted)' }}>{data.inventory.totalItems} items</span>
+                    <span style={{ fontSize: 12, color: 'var(--muted)' }}>·</span>
+                    <span style={{ fontSize: 12, color: 'var(--muted)' }}>{data.inventory.marketableItems} marketable</span>
+                  </div>
+                </div>
+              ) : data.inventory?.reason === 'private' ? (
+                <div className="card" style={{ opacity: 0.5 }}>
+                  <div className="stat-label">CS2 Inventory</div>
+                  <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>Private inventory</div>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Columna derecha */}
+            <div>
+              {/* CS2 + FACEIT cards */}
+              <div className="big-cards">
+                <div className="big-card card">
+                  <h3 style={{ color: 'var(--accent)', margin: '0 0 10px 0', fontSize: 15 }}>CS2 / Premier</h3>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: '#fff' }}>
+                    {data.cs2.ok ? data.cs2.hours : '—'}
+                  </div>
+                  {!data.cs2.ok && (
+                    <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
+                      {data.cs2.reason || 'Private profile or no data'}
+                    </div>
+                  )}
+                  <div className="recent-performance" style={{ marginTop: 14 }}>
+                    {['W','W','L','W','L','L','W','W'].map((r, i) => (
+                      <div key={i} className={r === 'W' ? 'win' : 'loss'}>{r}</div>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>Recent matches (placeholder)</div>
+                </div>
+
+                <div className="big-card card" style={{ borderLeft: '3px solid #ff7a18' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600 }}>FACEIT</div>
+                      <span className="faceit-badge" style={{ marginTop: 8, display: 'inline-block' }}>CS2</span>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 40, fontWeight: 800, color: hasFaceit ? '#ff7a18' : 'var(--muted)', lineHeight: 1 }}>
+                        {hasFaceit ? faceitLevel : '—'}
+                      </div>
+                      {faceitElo && (
+                        <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>{faceitElo} ELO</div>
+                      )}
+                      <div style={{ fontSize: 12, color: 'var(--muted)' }}>{faceitName || 'Not linked'}</div>
+                    </div>
+                  </div>
+                  {faceitName && (
+                    <a href={`https://www.faceit.com/en/players/${faceitName}`} target="_blank" rel="noreferrer"
+                       style={{ marginTop: 16, display: 'inline-block', fontSize: 13 }}>
+                      View full profile →
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* Métricas Leetify */}
+              <div className="card" style={{ marginTop: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div className="stat-label" style={{ margin: 0 }}>Leetify Performance</div>
+                    <span style={{ padding: '2px 8px', borderRadius: 6, background: 'rgba(167,139,250,0.12)', color: '#a78bfa', fontSize: 11, fontWeight: 600 }}>
+                      CS2
+                    </span>
+                  </div>
+                  {data.leetify && !data.leetify.reason && (
+                    <a href={`https://leetify.com/app/profile/${data.profile.steamId}`} target="_blank" rel="noreferrer"
+                       style={{ fontSize: 12, color: '#a78bfa' }}>
+                      View on Leetify →
+                    </a>
+                  )}
+                </div>
+
+                {data.leetify && !data.leetify.reason ? (
+                  <div className="leetify" style={{ marginTop: 0 }}>
+                    {([
+                      { label: 'Aim', val: data.leetify.aim },
+                      { label: 'Positioning', val: data.leetify.positioning },
+                      { label: 'Utility', val: data.leetify.utility },
+                    ] as { label: string; val: number | null | undefined }[]).map((m) => (
+                      <div key={m.label} className="leet-item">
+                        <div className="label">{m.label}</div>
+                        <div className="val">{m.val ?? '—'}</div>
+                        <div className="bar">
+                          <div className="bar-inner" style={{ width: m.val != null ? `${Math.min(m.val, 100)}%` : '0%' }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ color: 'var(--muted)', fontSize: 13 }}>
+                    No Leetify data — profile may be private or not registered
+                  </div>
+                )}
+              </div>
+
+              {/* ── Medallas CS2 ───────────────────────────────────── */}
+              <div className="card" style={{ marginTop: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                  <div className="stat-label" style={{ margin: 0 }}>CS2 Medals</div>
+                  <span style={{ padding: '2px 8px', borderRadius: 6, background: 'rgba(234,179,8,0.12)', color: '#fbbf24', fontSize: 11, fontWeight: 600 }}>
+                    CS2
+                  </span>
+                </div>
+
+                {data.medals?.reason === 'private' && (
+                  <div style={{ color: 'var(--muted)', fontSize: 13 }}>Private profile — medals not visible</div>
+                )}
+
+                {data.medals?.items && data.medals.items.length > 0 ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
+                    {data.medals.items.map((m, i) => (
+                      <div key={i} style={{
+                        background: 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(255,184,0,0.15)',
+                        borderRadius: 10, padding: '12px',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                        textAlign: 'center',
+                      }}>
+                        {m.icon ? (
+                          <img src={m.icon} alt={m.name} style={{ width: 64, height: 64, objectFit: 'contain' }} />
+                        ) : (
+                          <div style={{ width: 64, height: 64, background: 'rgba(251,191,36,0.1)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>🏅</div>
+                        )}
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.3 }}>{m.name}</div>
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
+                          {m.level !== '1' && (
+                            <span style={{ padding: '2px 7px', borderRadius: 5, background: 'rgba(251,191,36,0.15)', color: '#fbbf24', fontSize: 11, fontWeight: 600 }}>
+                              Lv.{m.level}
+                            </span>
+                          )}
+                          {m.xp !== '0' && (
+                            <span style={{ padding: '2px 7px', borderRadius: 5, background: 'rgba(255,255,255,0.05)', color: 'var(--muted)', fontSize: 11 }}>
+                              {m.xp} XP
+                            </span>
+                          )}
+                        </div>
+                        {m.unlocked && (
+                          <div style={{ fontSize: 10, color: 'var(--muted)', lineHeight: 1.2 }}>{m.unlocked}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : data.medals && !data.medals.reason ? (
+                  <div style={{ color: 'var(--muted)', fontSize: 13 }}>No CS2 medals</div>
+                ) : null}
+              </div>
+
+              {/* Debug */}
+              {debug && (
+                <div className="card" style={{ marginTop: 16 }}>
+                  <div className="stat-label">Raw data (debug)</div>
+                  <pre style={{
+                    maxHeight: 300, overflow: 'auto', background: '#0b1220',
+                    color: '#dbeafe', padding: 12, borderRadius: 8, fontSize: 11, marginTop: 8,
+                  }}>
+                    {JSON.stringify(data, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
