@@ -267,17 +267,22 @@ async function getSkinportPrices(): Promise<Map<string, number>> {
 
 // ─── CS2 Inventory Value ───────────────────────────────────────────────────
 
+// Resolves the base URL for self-calls (Edge proxy route)
+function siteBase() {
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL
+  return 'http://localhost:3000'
+}
+
 export async function fetchInventoryValue(steamId: string) {
   try {
-    // 1. Fetch inventory
-    const res = await fetch(
-      `https://steamcommunity.com/inventory/${steamId}/730/2?l=english&count=5000`,
-      { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122 Safari/537.36' } }
-    );
-    if (res.status === 403) return { ok: false, reason: 'private' };
-    if (!res.ok) return { ok: false, reason: `inventory_error_${res.status}` };
+    // 1. Fetch inventory via Edge proxy (Cloudflare IPs — not blocked by Steam like AWS/Vercel are)
+    const res = await fetch(`${siteBase()}/api/inventory?steamId=${steamId}`);
+    if (!res.ok) return { ok: false, reason: `inv_proxy_${res.status}` };
 
-    const data = await res.json();
+    const data = await res.json() as any;
+    if (data.error === 'private') return { ok: false, reason: 'private' };
+    if (data.error) return { ok: false, reason: data.error };
     if (!data.descriptions) return { ok: false, reason: 'no_descriptions' };
 
     const totalItems: number = data.total_inventory_count ?? 0;
