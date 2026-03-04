@@ -118,8 +118,9 @@ interface ProfileData {
   inventory: {
     totalItems?: number
     marketableItems?: number
-    approximateValueUSD?: number
+    approximateValueUSD?: number | null
     isPartial?: boolean
+    pricingFailed?: boolean
     topSkins?: Array<{ name: string; price: number; icon: string }>
     reason?: string
   } | null
@@ -236,44 +237,64 @@ export default function ProfilePage() {
           )}
 
           {/* ── Header ─────────────────────────────────────────────── */}
-          <div className="card" style={{ marginTop: 20, display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="card" style={{ marginTop: 20, display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
             {data.profile.avatar && (
-              <img src={data.profile.avatar} alt="avatar" className="profile-avatar" />
+              <a href={`https://steamcommunity.com/profiles/${data.profile.steamId}`} target="_blank" rel="noreferrer">
+                <img src={data.profile.avatar} alt="avatar" className="profile-avatar" style={{ display: 'block' }} />
+              </a>
             )}
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <div className="profile-name">{data.profile.name || 'Unknown Profile'}</div>
+                <a
+                  href={`https://steamcommunity.com/profiles/${data.profile.steamId}`}
+                  target="_blank" rel="noreferrer"
+                  style={{ fontSize: 11, color: 'var(--muted)', padding: '2px 8px', borderRadius: 6, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap' }}
+                >
+                  View on Steam ↗
+                </a>
               </div>
-              <div className="profile-id">{data.profile.steamId}</div>
+              <div className="profile-id" style={{ cursor: 'pointer', userSelect: 'all' }} title="Click to select">{data.profile.steamId}</div>
               {data.profile.memberSince && (
-                <div className="profile-age">Member since: {data.profile.memberSince}</div>
+                <div className="profile-age">Member since {data.profile.memberSince}</div>
               )}
-              <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
                 <span style={{
-                  padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                  padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
                   background: data.profile.visibility === 'public' ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
                   color: data.profile.visibility === 'public' ? 'var(--success)' : 'var(--danger)',
                   border: `1px solid ${data.profile.visibility === 'public' ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)'}`,
                 }}>
-                  {data.profile.visibility === 'public' ? 'Public' : 'Private'}
+                  {data.profile.visibility === 'public' ? '🌐 Public' : '🔒 Private'}
                 </span>
                 {data.profile.vacBanned && (
                   <span style={{
-                    padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
-                    background: 'rgba(239,68,68,0.12)', color: 'var(--danger)',
-                    border: '1px solid rgba(239,68,68,0.25)',
-                  }}>VAC Banned</span>
+                    padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                    background: 'rgba(239,68,68,0.15)', color: 'var(--danger)',
+                    border: '1px solid rgba(239,68,68,0.35)',
+                  }}>🚫 VAC Banned</span>
                 )}
                 {hasFaceit && (
+                  <a
+                    href={`https://www.faceit.com/en/players/${faceitName}`}
+                    target="_blank" rel="noreferrer"
+                    style={{
+                      padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                      background: 'rgba(255,122,24,0.15)', color: '#ff7a18',
+                      border: '1px solid rgba(255,122,24,0.3)', textDecoration: 'none',
+                    }}
+                  >FACEIT Lv.{faceitLevel}</a>
+                )}
+                {data.leetify?.premierElo != null && (
                   <span style={{
-                    padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
-                    background: 'rgba(255,122,24,0.15)', color: '#ff7a18',
-                    border: '1px solid rgba(255,122,24,0.3)',
-                  }}>FACEIT Lv.{faceitLevel}</span>
+                    padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                    background: 'rgba(99,179,237,0.12)', color: '#60a5fa',
+                    border: '1px solid rgba(99,179,237,0.25)',
+                  }}>Premier {data.leetify.premierElo.toLocaleString()}</span>
                 )}
                 {(data.votes?.yes ?? 0) > 0 && (
                   <span style={{
-                    padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                    padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
                     background: 'rgba(239,68,68,0.12)', color: '#f87171',
                     border: '1px solid rgba(239,68,68,0.2)',
                   }}>⚠ {data.votes!.yes} report{data.votes!.yes !== 1 ? 's' : ''}</span>
@@ -315,9 +336,22 @@ export default function ProfilePage() {
             <div className="top-stat-card">
               <div className="stat-label">Leetify Rating</div>
               <div className="top-stat-value" style={{ color: data.leetify?.overall != null ? '#a78bfa' : 'var(--muted)' }}>
-                {data.leetify?.overall != null ? data.leetify.overall : '—'}
+                {data.leetify?.overall != null ? (data.leetify.overall > 0 ? `+${data.leetify.overall}` : String(data.leetify.overall)) : '—'}
               </div>
-              {data.leetify?.overall != null && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>overall score</div>}
+              {data.leetify?.premierElo != null && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{data.leetify.premierElo.toLocaleString()} Premier ELO</div>}
+            </div>
+            <div className="top-stat-card">
+              <div className="stat-label">Inventory</div>
+              <div className="top-stat-value" style={{ color: (data.inventory?.approximateValueUSD ?? 0) > 0 ? '#f59e0b' : 'var(--muted)' }}>
+                {(data.inventory?.approximateValueUSD ?? 0) > 0
+                  ? `$${data.inventory!.approximateValueUSD!.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+                  : data.inventory?.reason === 'private' ? '🔒' : '—'}
+              </div>
+              {data.inventory?.totalItems != null && (
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                  {data.inventory.totalItems} items{data.inventory.isPartial ? ' (partial)' : ''}
+                </div>
+              )}
             </div>
           </div>
 
@@ -412,27 +446,38 @@ export default function ProfilePage() {
               )}
 
               {/* Inventario CS2 */}
-              {data.inventory && !data.inventory.reason ? (
-                <div className="card" style={{ borderLeft: '3px solid #f59e0b' }}>
+              {data.inventory && (
+                <div className="card" style={{ borderLeft: data.inventory.reason === 'private' ? undefined : '3px solid #f59e0b', opacity: data.inventory.reason === 'private' ? 0.6 : 1 }}>
                   <div className="stat-label">CS2 Inventory</div>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: '#f59e0b', marginTop: 8, lineHeight: 1 }}>
-                    ${data.inventory.approximateValueUSD?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '—'}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                    approx. value{data.inventory.isPartial ? ' (partial, top 40 items)' : ''}
-                  </div>
-                  <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-                    <span style={{ fontSize: 12, color: 'var(--muted)' }}>{data.inventory.totalItems} items</span>
-                    <span style={{ fontSize: 12, color: 'var(--muted)' }}>·</span>
-                    <span style={{ fontSize: 12, color: 'var(--muted)' }}>{data.inventory.marketableItems} marketable</span>
-                  </div>
+                  {data.inventory.reason === 'private' ? (
+                    <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>🔒 Private inventory</div>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 28, fontWeight: 800, color: '#f59e0b', marginTop: 8, lineHeight: 1 }}>
+                        {(data.inventory.approximateValueUSD ?? 0) > 0
+                          ? `$${data.inventory.approximateValueUSD!.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : '—'}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+                        {(data.inventory.approximateValueUSD ?? 0) > 0
+                          ? `approx. value${data.inventory.isPartial ? ' (top 10 items)' : ''}`
+                          : data.inventory.pricingFailed ? 'Pricing unavailable (rate limited)' : 'No marketable items'}
+                      </div>
+                      {data.inventory.totalItems != null && (
+                        <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 12, color: 'var(--muted)' }}>{data.inventory.totalItems} items total</span>
+                          {data.inventory.marketableItems != null && data.inventory.marketableItems > 0 && (
+                            <>
+                              <span style={{ fontSize: 12, color: 'var(--muted)' }}>·</span>
+                              <span style={{ fontSize: 12, color: 'var(--muted)' }}>{data.inventory.marketableItems} marketable</span>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
-              ) : data.inventory?.reason === 'private' ? (
-                <div className="card" style={{ opacity: 0.5 }}>
-                  <div className="stat-label">CS2 Inventory</div>
-                  <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>Private inventory</div>
-                </div>
-              ) : null}
+              )}
             </div>
 
             {/* Columna derecha */}
@@ -689,7 +734,7 @@ export default function ProfilePage() {
           </div>
 
           {/* ── Inventory Value ─────────────────────────────────────── */}
-          {(data.inventory?.topSkins?.length || data.inventory?.approximateValueUSD) && (
+          {data.inventory && !data.inventory.reason && (data.inventory.topSkins?.length || (data.inventory.totalItems ?? 0) > 0) && (
             <div style={{ marginTop: 24 }}>
               <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 16 }}>
                 Inventory Value

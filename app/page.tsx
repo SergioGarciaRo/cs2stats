@@ -169,6 +169,33 @@ export default function Home() {
 
           </div>
         )}
+
+        {/* SEO feature section */}
+        <div style={{ width: '100%', paddingTop: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 28 }}>
+            {[
+              { icon: '📊', title: 'Premier ELO & FACEIT Level', desc: 'Instantly see CS2 Premier rating and FACEIT skill level side by side.' },
+              { icon: '🎯', title: 'K/D, HS% & Win Rate', desc: 'Full CS2 competitive stats pulled directly from Steam and Leetify.' },
+              { icon: '🚫', title: 'VAC Ban & Risk Score', desc: 'Detect cheaters, smurfs and purchased accounts with our legit score.' },
+              { icon: '💰', title: 'Steam Inventory Value', desc: 'Live market prices for CS2 skins and inventory worth in USD.' },
+            ].map(f => (
+              <div key={f.title} style={{
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: 12, padding: '16px 18px',
+              }}>
+                <div style={{ fontSize: 22, marginBottom: 8 }}>{f.icon}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 4 }}>{f.title}</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>{f.desc}</div>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', lineHeight: 1.6, maxWidth: 600, margin: '0 auto' }}>
+            CS2 Stats is a free CS2 player lookup tool. Enter any <strong style={{ color: '#a1a1aa' }}>SteamID64</strong>, <strong style={{ color: '#a1a1aa' }}>vanity URL</strong>, or <strong style={{ color: '#a1a1aa' }}>steamcommunity.com link</strong> to instantly view Premier ELO, FACEIT level, K/D ratio, headshot %, inventory value, VAC ban history and more. No login required.{' '}
+            <a href="/cs2-legit-checker" style={{ color: 'var(--accent)' }}>Learn about our CS2 legit checker →</a>
+          </p>
+        </div>
+
       </div>
     </div>
   )

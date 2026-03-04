@@ -272,30 +272,53 @@ export async function fetchInventoryValue(steamId: string) {
       if (name) itemCount.set(name, (itemCount.get(name) ?? 0) + 1);
     }
 
-    // Fetch prices sequentially in small batches to avoid Steam market rate limit (429)
-    const uniqueNames = [...itemCount.keys()].slice(0, 20);
+    // Sort by most duplicated (most likely to have value) then take top 10
+    const sortedNames = [...itemCount.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([name]) => name)
+      .slice(0, 10);
+
     let totalUSD = 0;
     let priced = 0;
+    let pricingFailed = false;
     const itemPrices = new Map<string, number>(); // name → unit price
 
-    for (const name of uniqueNames) {
+    for (const name of sortedNames) {
       try {
         const pr = await fetch(
           `https://steamcommunity.com/market/priceoverview/?appid=730&currency=1&market_hash_name=${encodeURIComponent(name)}`,
           { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122 Safari/537.36' } }
         );
-        if (pr.status === 429) break; // rate limited — stop early with partial result
-        if (!pr.ok) continue;
-        const pj = await pr.json();
-        const priceStr: string = pj.median_price ?? pj.lowest_price ?? '';
-        const price = parseFloat(priceStr.replace(/[^0-9.]/g, ''));
-        if (!isNaN(price)) {
-          totalUSD += price * (itemCount.get(name) ?? 1);
-          itemPrices.set(name, price);
-          priced++;
+        if (pr.status === 429) {
+          // Rate limited — wait 2s and try once more, then stop
+          await new Promise(r => setTimeout(r, 2000));
+          const retry = await fetch(
+            `https://steamcommunity.com/market/priceoverview/?appid=730&currency=1&market_hash_name=${encodeURIComponent(name)}`,
+            { headers: { 'User-Agent': 'Mozilla/5.0' } }
+          );
+          if (retry.status === 429) { pricingFailed = true; break; }
+          if (!retry.ok) continue;
+          const pj2 = await retry.json();
+          const priceStr2: string = pj2.median_price ?? pj2.lowest_price ?? '';
+          const price2 = parseFloat(priceStr2.replace(/[^0-9.]/g, ''));
+          if (!isNaN(price2)) {
+            totalUSD += price2 * (itemCount.get(name) ?? 1);
+            itemPrices.set(name, price2);
+            priced++;
+          }
+        } else {
+          if (!pr.ok) continue;
+          const pj = await pr.json();
+          const priceStr: string = pj.median_price ?? pj.lowest_price ?? '';
+          const price = parseFloat(priceStr.replace(/[^0-9.]/g, ''));
+          if (!isNaN(price)) {
+            totalUSD += price * (itemCount.get(name) ?? 1);
+            itemPrices.set(name, price);
+            priced++;
+          }
         }
-        // Small delay between requests to respect rate limits
-        await new Promise(r => setTimeout(r, 200));
+        // Respectful delay between requests
+        await new Promise(r => setTimeout(r, 500));
       } catch {}
     }
 
@@ -315,8 +338,9 @@ export async function fetchInventoryValue(steamId: string) {
       totalItems,
       marketableItems: itemCount.size,
       pricedItems: priced,
-      approximateValueUSD: Math.round(totalUSD * 100) / 100,
-      isPartial: uniqueNames.length < itemCount.size,
+      approximateValueUSD: priced > 0 ? Math.round(totalUSD * 100) / 100 : null,
+      isPartial: pricingFailed || sortedNames.length < itemCount.size,
+      pricingFailed,
       topSkins,
     };
   } catch (e) {
