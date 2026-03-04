@@ -465,7 +465,7 @@ export async function fetchFaceitMatchHistory(steamId: string): Promise<
 
 export async function fetchLeetifyRating(steamId: string) {
   try {
-    const res = await fetch(`https://api.leetify.com/api/profile/${steamId}`, {
+    const res = await fetch(`https://api.leetify.com/api/mini-profiles/${steamId}`, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122 Safari/537.36',
         'Accept': 'application/json',
@@ -475,51 +475,44 @@ export async function fetchLeetifyRating(steamId: string) {
     if (!res.ok) return { ok: false, reason: `leetify_${res.status}` };
 
     const j = await res.json();
-    const r = j?.leetifyRatings;
+    const r = j?.ratings;
 
     if (!r) return { ok: false, reason: 'no_ratings' };
 
-    // Helper to extract top-% percentile from playerRankings (value 0–1 or 0–100)
-    const pr = j?.playerRankings ?? {}
-    function topPct(key: string): number | null {
-      const v = pr[key]?.rank ?? pr[key]
-      if (typeof v !== 'number') return null
-      // Leetify returns 0–1 fraction (e.g. 0.46 = Top 46%)
-      return v <= 1 ? Math.round(v * 100) : Math.round(v)
+    // aim/positioning/utility are percentile scores (0–100)
+    function pct(v: unknown): number | null {
+      return typeof v === 'number' ? Math.round(v) : null
+    }
+    // leetify/opening/clutch are raw floats (e.g. -0.014); show as rounded 2-decimal
+    function r2(v: unknown): number | null {
+      return typeof v === 'number' ? Math.round(v * 100) / 100 : null
     }
 
-    // Round to 1 decimal (Opening/Clutch are on a 0–10 scale)
-    function r1(v: unknown): number | null {
-      return typeof v === 'number' ? Math.round(v * 10) / 10 : null
-    }
-
-    const overall =
-      typeof r.overall    === 'number' ? r1(r.overall)    :
-      typeof j.appRating  === 'number' ? r1(j.appRating)  : null
+    // Premier rank from ranks array
+    const premierRank = (j?.ranks ?? []).find((rk: any) => rk.dataSource === 'matchmaking')
+    const premierElo = typeof premierRank?.skillLevel === 'number' ? premierRank.skillLevel : null
 
     return {
       ok: true,
-      // Core metrics
-      aim:            r1(r.aim),
-      positioning:    r1(r.positioning),
-      utility:        r1(r.utility),
-      opening:        r1(r.opening   ?? r.firefight),
-      clutch:         r1(r.clutch),
-      overall,
-      // Side-specific ratings
-      ctRating: typeof j.ctRating   === 'number' ? r1(j.ctRating)   :
-                typeof j.ctAppRating === 'number' ? r1(j.ctAppRating): null,
-      tRating:  typeof j.tRating    === 'number' ? r1(j.tRating)    :
-                typeof j.tAppRating  === 'number' ? r1(j.tAppRating) : null,
+      // Percentile scores (0–100, higher = better)
+      aim:         pct(r.aim),
+      positioning: pct(r.positioning),
+      utility:     pct(r.utility),
+      // Raw Leetify ratings (small floats)
+      overall:     r2(r.leetify),
+      ctRating:    r2(r.ctLeetify),
+      tRating:     r2(r.tLeetify),
+      opening:     r2(r.opening),
+      clutch:      r2(r.clutch),
       // Context
-      gameCount:  typeof j.gameCount  === 'number' ? j.gameCount  : null,
-      roundCount: typeof j.roundCount === 'number' ? j.roundCount : null,
-      // Top-% percentiles
-      aimTop:         topPct('aim'),
-      positioningTop: topPct('positioning'),
-      utilityTop:     topPct('utility'),
-      openingTop:     topPct('opening') ?? topPct('firefight'),
-      clutchTop:      topPct('clutch'),
+      gameCount:   typeof r.gamesPlayed          === 'number' ? r.gamesPlayed          : null,
+      roundCount:  typeof r.leetifyRatingRounds   === 'number' ? r.leetifyRatingRounds  : null,
+      // Premier ELO from Leetify
+      premierElo,
+      // Recent match results (win/loss)
+      recentMatches: Array.isArray(j.recentMatches)
+        ? j.recentMatches.map((m: any) => m.result as string)
+        : [],
     };
   } catch (e) {
     return { ok: false, reason: String(e) };

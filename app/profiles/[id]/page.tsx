@@ -460,29 +460,6 @@ export default function ProfilePage() {
                   <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>Recent matches (placeholder)</div>
                 </div>
 
-                <div className="big-card card" style={{ borderLeft: '3px solid #ff7a18' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <div style={{ fontSize: 11, color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600 }}>FACEIT</div>
-                      <span className="faceit-badge" style={{ marginTop: 8, display: 'inline-block' }}>CS2</span>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 40, fontWeight: 800, color: hasFaceit ? '#ff7a18' : 'var(--muted)', lineHeight: 1 }}>
-                        {hasFaceit ? faceitLevel : '—'}
-                      </div>
-                      {faceitElo && (
-                        <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>{faceitElo} ELO</div>
-                      )}
-                      <div style={{ fontSize: 12, color: 'var(--muted)' }}>{faceitName || 'Not linked'}</div>
-                    </div>
-                  </div>
-                  {faceitName && (
-                    <a href={`https://www.faceit.com/en/players/${faceitName}`} target="_blank" rel="noreferrer"
-                       style={{ marginTop: 16, display: 'inline-block', fontSize: 13 }}>
-                      View full profile →
-                    </a>
-                  )}
-                </div>
               </div>
 
               {/* CS2 In-Game Stats */}
@@ -584,45 +561,78 @@ export default function ProfilePage() {
 
                 {data.leetify && !data.leetify.reason ? (
                   <>
-                    {/* Overall rating row */}
-                    {data.leetify.overall != null && (
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 14, paddingBottom: 14, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    {/* Overall Leetify rating + CT/T + Premier ELO */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 14, paddingBottom: 14, borderBottom: '1px solid rgba(255,255,255,0.06)', flexWrap: 'wrap' }}>
+                      {data.leetify.overall != null && (
                         <div>
-                          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>Overall Rating</div>
-                          <div style={{ fontSize: 32, fontWeight: 800, color: '#a78bfa', lineHeight: 1 }}>{data.leetify.overall}</div>
-                        </div>
-                        {(data.leetify.ctRating != null || data.leetify.tRating != null) && (
-                          <div style={{ fontSize: 13, color: 'var(--muted)', paddingBottom: 4 }}>
-                            {data.leetify.ctRating != null && <span style={{ color: '#7dd3fc' }}>CT {data.leetify.ctRating}</span>}
-                            {data.leetify.ctRating != null && data.leetify.tRating != null && <span style={{ margin: '0 6px' }}>·</span>}
-                            {data.leetify.tRating != null && <span style={{ color: '#fca5a5' }}>T {data.leetify.tRating}</span>}
+                          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>Leetify Rating</div>
+                          <div style={{ fontSize: 28, fontWeight: 800, color: data.leetify.overall >= 0 ? '#a78bfa' : '#f87171', lineHeight: 1 }}>
+                            {data.leetify.overall > 0 ? '+' : ''}{data.leetify.overall}
                           </div>
-                        )}
-                      </div>
-                    )}
+                          {(data.leetify.ctRating != null || data.leetify.tRating != null) && (
+                            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, display: 'flex', gap: 8 }}>
+                              {data.leetify.ctRating != null && <span style={{ color: '#7dd3fc' }}>CT {data.leetify.ctRating > 0 ? '+' : ''}{data.leetify.ctRating}</span>}
+                              {data.leetify.tRating != null && <span style={{ color: '#fca5a5' }}>T {data.leetify.tRating > 0 ? '+' : ''}{data.leetify.tRating}</span>}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {data.leetify.premierElo != null && (
+                        <div>
+                          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>Premier ELO</div>
+                          <div style={{ fontSize: 28, fontWeight: 800, color: '#fff', lineHeight: 1 }}>{data.leetify.premierElo.toLocaleString()}</div>
+                        </div>
+                      )}
+                      {/* Recent matches from Leetify */}
+                      {data.leetify.recentMatches && data.leetify.recentMatches.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>Recent</div>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            {(data.leetify.recentMatches as string[]).slice(0, 8).map((r: string, i: number) => (
+                              <div key={i} style={{
+                                width: 22, height: 22, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: 10, fontWeight: 700,
+                                background: r === 'win' ? 'rgba(74,222,128,0.15)' : 'rgba(248,113,113,0.15)',
+                                color: r === 'win' ? '#4ade80' : '#f87171',
+                                border: `1px solid ${r === 'win' ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)'}`,
+                              }}>
+                                {r === 'win' ? 'W' : 'L'}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
-                    {/* 5-metric grid */}
+                    {/* Percentile bars: Aim / Positioning / Utility */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 20px' }}>
                       {([
-                        { label: 'Aim',         val: data.leetify.aim,         top: data.leetify.aimTop },
-                        { label: 'Positioning', val: data.leetify.positioning,  top: data.leetify.positioningTop },
-                        { label: 'Utility',     val: data.leetify.utility,      top: data.leetify.utilityTop },
-                        { label: 'Opening',     val: data.leetify.opening,      top: data.leetify.openingTop },
-                        { label: 'Clutch',      val: data.leetify.clutch,       top: data.leetify.clutchTop },
-                      ] as { label: string; val: number | null | undefined; top: number | null | undefined }[]).map((m) => (
+                        { label: 'Aim',         val: data.leetify.aim },
+                        { label: 'Positioning', val: data.leetify.positioning },
+                        { label: 'Utility',     val: data.leetify.utility },
+                      ] as { label: string; val: number | null | undefined }[]).map((m) => (
                         <div key={m.label}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
                             <span style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{m.label}</span>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                              <span style={{ fontSize: 15, fontWeight: 700, color: '#a78bfa' }}>{m.val ?? '—'}</span>
-                              {m.top != null && (
-                                <span style={{ fontSize: 10, color: '#71717a', fontWeight: 500 }}>Top {m.top}%</span>
-                              )}
-                            </div>
+                            <span style={{ fontSize: 15, fontWeight: 700, color: '#a78bfa' }}>
+                              {m.val != null ? `${m.val}%` : '—'}
+                            </span>
                           </div>
                           <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }}>
                             <div style={{ height: '100%', borderRadius: 2, background: '#a78bfa', width: m.val != null ? `${Math.min(m.val, 100)}%` : '0%' }} />
                           </div>
+                        </div>
+                      ))}
+                      {/* Opening / Clutch raw ratings */}
+                      {([
+                        { label: 'Opening', val: data.leetify.opening },
+                        { label: 'Clutch',  val: data.leetify.clutch },
+                      ] as { label: string; val: number | null | undefined }[]).map((m) => (
+                        <div key={m.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{m.label}</span>
+                          <span style={{ fontSize: 15, fontWeight: 700, color: m.val != null && m.val >= 0 ? '#4ade80' : '#f87171' }}>
+                            {m.val != null ? (m.val > 0 ? `+${m.val}` : String(m.val)) : '—'}
+                          </span>
                         </div>
                       ))}
                     </div>
