@@ -300,7 +300,7 @@ export async function fetchCS2Stats(steamId: string) {
       `https://api.steampowered.com/ISteamUserStats/GetUserStatsForGame/v2/?appid=730&key=${apiKey}&steamid=${steamId}`,
       { headers: { 'User-Agent': 'Mozilla/5.0' } }
     )
-    if (res.status === 403) return { ok: false, reason: 'private' }
+    if (res.status === 403 || res.status === 400) return { ok: false, reason: 'private' }
     if (!res.ok) return { ok: false, reason: `steam_${res.status}` }
 
     const j = await res.json()
