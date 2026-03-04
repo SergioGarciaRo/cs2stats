@@ -144,7 +144,7 @@ export default function PerformanceCharts({ matches }: Props) {
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+      gridTemplateColumns: 'repeat(2, 1fr)',
       gap: 16,
     }}>
       {charts.map(c => (
