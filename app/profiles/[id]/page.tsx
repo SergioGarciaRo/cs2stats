@@ -486,46 +486,76 @@ export default function ProfilePage() {
               </div>
 
               {/* CS2 In-Game Stats */}
-              <div className="card" style={{ marginTop: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                  <div className="stat-label" style={{ margin: 0 }}>CS2 Statistics</div>
-                  <span style={{ padding: '2px 8px', borderRadius: 6, background: 'rgba(99,179,237,0.12)', color: '#63b3ed', fontSize: 11, fontWeight: 600 }}>OFFICIAL</span>
-                </div>
-                {data.cs2Stats && !data.cs2Stats.reason ? (
-                  <>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-                      {[
-                        { label: 'K/D Ratio',  val: data.cs2Stats.kd,          color: (data.cs2Stats.kd ?? 0) > 4 ? '#f87171' : '#fff',   flag: (data.cs2Stats.kd ?? 0) > 4 },
-                        { label: 'Headshot %', val: `${data.cs2Stats.hsPct}%`,  color: (data.cs2Stats.hsPct ?? 0) > 65 ? '#f87171' : '#fff', flag: (data.cs2Stats.hsPct ?? 0) > 65 },
-                        { label: 'Accuracy',   val: `${data.cs2Stats.accuracy}%`, color: (data.cs2Stats.accuracy ?? 0) > 35 ? '#f87171' : '#fff', flag: (data.cs2Stats.accuracy ?? 0) > 35 },
-                        { label: 'Win Rate',   val: `${data.cs2Stats.winRate}%`, color: '#fff', flag: false },
-                        { label: 'Total Kills', val: data.cs2Stats.kills?.toLocaleString(), color: '#fff', flag: false },
-                        { label: 'MVPs',       val: data.cs2Stats.mvps?.toLocaleString(), color: '#fff', flag: false },
-                      ].map((s) => (
-                        <div key={s.label} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${s.flag ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.06)'}`, borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
-                          <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
-                          <div style={{ fontSize: 18, fontWeight: 800, color: s.color, marginTop: 4 }}>
-                            {s.flag && <span style={{ fontSize: 12, marginRight: 3 }}>⚠</span>}{s.val ?? '—'}
-                          </div>
-                        </div>
-                      ))}
+              {(() => {
+                const officialOk = data.cs2Stats && !data.cs2Stats.reason
+                const matches = data.matchHistory?.matches ?? []
+                const faceitOk = !officialOk && matches.length > 0
+                const faceitKd   = faceitOk ? Math.round((matches.reduce((a, m) => a + m.kd, 0) / matches.length) * 100) / 100 : null
+                const faceitHs   = faceitOk ? Math.round(matches.reduce((a, m) => a + m.hsPercent, 0) / matches.length) : null
+                const faceitWr   = faceitOk ? Math.round((matches.filter(m => m.win).length / matches.length) * 100) : null
+                const faceitAdr  = faceitOk && matches.some(m => m.adr > 0) ? Math.round(matches.reduce((a, m) => a + m.adr, 0) / matches.length) : null
+                const faceitKills = faceitOk ? matches.reduce((a, m) => a + m.kills, 0) : null
+                return (
+                  <div className="card" style={{ marginTop: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+                      <div className="stat-label" style={{ margin: 0 }}>CS2 Statistics</div>
+                      <span style={{ padding: '2px 8px', borderRadius: 6, background: officialOk ? 'rgba(99,179,237,0.12)' : 'rgba(255,122,24,0.12)', color: officialOk ? '#63b3ed' : '#ff7a18', fontSize: 11, fontWeight: 600 }}>
+                        {officialOk ? 'OFFICIAL' : faceitOk ? `FACEIT · last ${matches.length} matches` : 'OFFICIAL'}
+                      </span>
                     </div>
-                    {((data.cs2Stats.hsPct ?? 0) > 65 || (data.cs2Stats.kd ?? 0) > 4 || (data.cs2Stats.accuracy ?? 0) > 35) && (
-                      <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', fontSize: 12, color: '#f87171' }}>
-                        ⚠ Suspicious stats detected — unusually high values flagged in red
+                    {officialOk ? (
+                      <>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                          {[
+                            { label: 'K/D Ratio',   val: data.cs2Stats!.kd,                    color: (data.cs2Stats!.kd ?? 0) > 4 ? '#f87171' : '#fff',   flag: (data.cs2Stats!.kd ?? 0) > 4 },
+                            { label: 'Headshot %',  val: `${data.cs2Stats!.hsPct}%`,            color: (data.cs2Stats!.hsPct ?? 0) > 65 ? '#f87171' : '#fff', flag: (data.cs2Stats!.hsPct ?? 0) > 65 },
+                            { label: 'Accuracy',    val: `${data.cs2Stats!.accuracy}%`,         color: (data.cs2Stats!.accuracy ?? 0) > 35 ? '#f87171' : '#fff', flag: (data.cs2Stats!.accuracy ?? 0) > 35 },
+                            { label: 'Win Rate',    val: `${data.cs2Stats!.winRate}%`,          color: '#fff', flag: false },
+                            { label: 'Total Kills', val: data.cs2Stats!.kills?.toLocaleString(), color: '#fff', flag: false },
+                            { label: 'MVPs',        val: data.cs2Stats!.mvps?.toLocaleString(),  color: '#fff', flag: false },
+                          ].map((s) => (
+                            <div key={s.label} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${s.flag ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.06)'}`, borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+                              <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
+                              <div style={{ fontSize: 18, fontWeight: 800, color: s.color, marginTop: 4 }}>
+                                {s.flag && <span style={{ fontSize: 12, marginRight: 3 }}>⚠</span>}{s.val ?? '—'}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {((data.cs2Stats!.hsPct ?? 0) > 65 || (data.cs2Stats!.kd ?? 0) > 4 || (data.cs2Stats!.accuracy ?? 0) > 35) && (
+                          <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', fontSize: 12, color: '#f87171' }}>
+                            ⚠ Suspicious stats detected — unusually high values flagged in red
+                          </div>
+                        )}
+                      </>
+                    ) : faceitOk ? (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                        {[
+                          { label: 'Avg K/D',     val: faceitKd,           color: (faceitKd ?? 0) > 4 ? '#f87171' : '#fff' },
+                          { label: 'Avg HS%',     val: faceitHs != null ? `${faceitHs}%` : null, color: (faceitHs ?? 0) > 65 ? '#f87171' : '#fff' },
+                          { label: 'Win Rate',    val: faceitWr != null ? `${faceitWr}%` : null, color: '#fff' },
+                          { label: 'Avg ADR',     val: faceitAdr,          color: '#fff' },
+                          { label: 'Total Kills', val: faceitKills?.toLocaleString(), color: '#fff' },
+                          { label: 'Matches',     val: matches.length,     color: '#fff' },
+                        ].map((s) => (
+                          <div key={s.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+                            <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
+                            <div style={{ fontSize: 18, fontWeight: 800, color: s.color, marginTop: 4 }}>{s.val ?? '—'}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ color: 'var(--muted)', fontSize: 13 }}>
+                        {data.cs2Stats?.reason === 'private'
+                          ? 'Stats are private and no FACEIT match history available'
+                          : data.cs2Stats?.reason === 'no_api_key'
+                          ? 'Steam API key not configured'
+                          : 'No CS2 statistics available'}
                       </div>
                     )}
-                  </>
-                ) : (
-                  <div style={{ color: 'var(--muted)', fontSize: 13 }}>
-                    {data.cs2Stats?.reason === 'private'
-                      ? 'Stats are private — the player has hidden their game details on Steam'
-                      : data.cs2Stats?.reason === 'no_api_key'
-                      ? 'Steam API key not configured'
-                      : 'No CS2 statistics available'}
                   </div>
-                )}
-              </div>
+                )
+              })()}
 
               {/* Métricas Leetify */}
               <div className="card" style={{ marginTop: 16 }}>
