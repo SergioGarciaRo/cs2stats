@@ -237,11 +237,39 @@ export async function fetchCS2Medals(steamId: string) {
   }
 }
 
+// ─── Skinport bulk price cache (module-level, lives as long as serverless instance) ──
+let _skinportCache: { map: Map<string, number>; ts: number } | null = null;
+
+async function getSkinportPrices(): Promise<Map<string, number>> {
+  const now = Date.now();
+  if (_skinportCache && now - _skinportCache.ts < 3_600_000) return _skinportCache.map;
+
+  const res = await fetch('https://api.skinport.com/v1/items?app_id=730&currency=USD', {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122 Safari/537.36',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Accept': 'application/json',
+    },
+  });
+  if (!res.ok) throw new Error(`skinport_${res.status}`);
+
+  const items: Array<{ market_hash_name: string; min_price: number | null; suggested_price: number | null }> =
+    await res.json();
+
+  const map = new Map<string, number>();
+  for (const item of items) {
+    const price = item.min_price ?? item.suggested_price;
+    if (price && item.market_hash_name) map.set(item.market_hash_name, price);
+  }
+  _skinportCache = { map, ts: now };
+  return map;
+}
+
 // ─── CS2 Inventory Value ───────────────────────────────────────────────────
 
 export async function fetchInventoryValue(steamId: string) {
   try {
-    // Fetch inventory (assets + descriptions in one call)
+    // 1. Fetch inventory
     const res = await fetch(
       `https://steamcommunity.com/inventory/${steamId}/730/2?l=english&count=5000`,
       { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122 Safari/537.36' } }
@@ -254,76 +282,48 @@ export async function fetchInventoryValue(steamId: string) {
 
     const totalItems: number = data.total_inventory_count ?? 0;
 
-    // Build map: classid+instanceid → market_hash_name + icon
+    // Build maps: classid_instanceid → market_hash_name, name → icon_url
     const descMap = new Map<string, string>();
-    const iconMap = new Map<string, string>(); // market_hash_name → icon_url
+    const iconMap = new Map<string, string>();
     for (const d of data.descriptions) {
       if (d.marketable === 1 && d.market_hash_name) {
         descMap.set(`${d.classid}_${d.instanceid}`, d.market_hash_name);
-        if (d.icon_url) iconMap.set(d.market_hash_name, d.icon_url as string);
+        if (d.icon_url) iconMap.set(d.market_hash_name as string, d.icon_url as string);
       }
     }
 
-    // Count occurrences of each market_hash_name
+    // Count occurrences of each marketable item
     const itemCount = new Map<string, number>();
     for (const asset of (data.assets ?? [])) {
-      const key = `${asset.classid}_${asset.instanceid}`;
-      const name = descMap.get(key);
+      const name = descMap.get(`${asset.classid}_${asset.instanceid}`);
       if (name) itemCount.set(name, (itemCount.get(name) ?? 0) + 1);
     }
 
-    // Sort by most duplicated (most likely to have value) then take top 10
-    const sortedNames = [...itemCount.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([name]) => name)
-      .slice(0, 10);
-
-    let totalUSD = 0;
-    let priced = 0;
-    let pricingFailed = false;
-    const itemPrices = new Map<string, number>(); // name → unit price
-
-    for (const name of sortedNames) {
-      try {
-        const pr = await fetch(
-          `https://steamcommunity.com/market/priceoverview/?appid=730&currency=1&market_hash_name=${encodeURIComponent(name)}`,
-          { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122 Safari/537.36' } }
-        );
-        if (pr.status === 429) {
-          // Rate limited — wait 2s and try once more, then stop
-          await new Promise(r => setTimeout(r, 2000));
-          const retry = await fetch(
-            `https://steamcommunity.com/market/priceoverview/?appid=730&currency=1&market_hash_name=${encodeURIComponent(name)}`,
-            { headers: { 'User-Agent': 'Mozilla/5.0' } }
-          );
-          if (retry.status === 429) { pricingFailed = true; break; }
-          if (!retry.ok) continue;
-          const pj2 = await retry.json();
-          const priceStr2: string = pj2.median_price ?? pj2.lowest_price ?? '';
-          const price2 = parseFloat(priceStr2.replace(/[^0-9.]/g, ''));
-          if (!isNaN(price2)) {
-            totalUSD += price2 * (itemCount.get(name) ?? 1);
-            itemPrices.set(name, price2);
-            priced++;
-          }
-        } else {
-          if (!pr.ok) continue;
-          const pj = await pr.json();
-          const priceStr: string = pj.median_price ?? pj.lowest_price ?? '';
-          const price = parseFloat(priceStr.replace(/[^0-9.]/g, ''));
-          if (!isNaN(price)) {
-            totalUSD += price * (itemCount.get(name) ?? 1);
-            itemPrices.set(name, price);
-            priced++;
-          }
-        }
-        // Respectful delay between requests
-        await new Promise(r => setTimeout(r, 500));
-      } catch {}
+    // 2. Fetch bulk prices from Skinport (single request, no rate limit)
+    let priceMap: Map<string, number>;
+    try {
+      priceMap = await getSkinportPrices();
+    } catch {
+      return { ok: false, reason: 'pricing_unavailable' };
     }
 
+    // 3. Calculate total value across ALL marketable items
+    let totalUSD = 0;
+    let priced = 0;
+    const itemPrices = new Map<string, number>(); // name → unit price
+
+    for (const [name, count] of itemCount.entries()) {
+      const unitPrice = priceMap.get(name);
+      if (unitPrice) {
+        totalUSD += unitPrice * count;
+        itemPrices.set(name, unitPrice);
+        priced++;
+      }
+    }
+
+    // Top 5 most valuable items
     const topSkins = [...itemPrices.entries()]
-      .sort((a, b) => b[1] - a[1])
+      .sort((a, b) => (b[1] * (itemCount.get(b[0]) ?? 1)) - (a[1] * (itemCount.get(a[0]) ?? 1)))
       .slice(0, 5)
       .map(([name, price]) => ({
         name,
@@ -339,8 +339,8 @@ export async function fetchInventoryValue(steamId: string) {
       marketableItems: itemCount.size,
       pricedItems: priced,
       approximateValueUSD: priced > 0 ? Math.round(totalUSD * 100) / 100 : null,
-      isPartial: pricingFailed || sortedNames.length < itemCount.size,
-      pricingFailed,
+      isPartial: priced < itemCount.size,
+      pricingFailed: false,
       topSkins,
     };
   } catch (e) {

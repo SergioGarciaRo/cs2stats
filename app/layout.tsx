@@ -75,7 +75,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </a>
 
             <a href="/" className="nav-link">🔍 Search</a>
-            <a href="/cs2-legit-checker" className="nav-link">🛡 Legit Checker</a>
             <a href="/top-viewed" className="nav-link viewed">👁 Most Viewed</a>
             <a href="/top-cheaters" className="nav-link suspected">⚠ Top Suspected</a>
             <div style={{ marginLeft: 'auto', fontSize: 12, color: '#fbbf24', fontFamily: 'monospace', fontWeight: 700 }}>v1.4.2</div>
