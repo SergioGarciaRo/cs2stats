@@ -16,7 +16,7 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",       // Next.js needs these
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: https://avatars.steamstatic.com https://cdn.akamai.steamstatic.com https://steamcdn-a.akamaihd.net https://community.cloudflare.steamstatic.com",
+      "img-src 'self' data: https://*.steamstatic.com https://*.akamaihd.net https://*.steamusercontent.com https://steamcdn-a.akamaihd.net https://community.cloudflare.steamstatic.com",
       "connect-src 'self'",
       "frame-ancestors 'none'",
     ].join('; '),
