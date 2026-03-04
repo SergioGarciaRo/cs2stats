@@ -740,7 +740,7 @@ export default function ProfilePage() {
                 Inventory Value
               </div>
               <InventoryValue
-                totalValue={data.inventory.approximateValueUSD}
+                totalValue={data.inventory.approximateValueUSD ?? undefined}
                 topSkins={data.inventory.topSkins}
                 totalItems={data.inventory.totalItems}
                 isPrivate={!!data.inventory.reason}
