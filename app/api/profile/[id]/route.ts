@@ -105,11 +105,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           tRating: leetifyResult.tRating,
           gameCount: leetifyResult.gameCount,
           roundCount: leetifyResult.roundCount,
-          aimTop: leetifyResult.aimTop,
-          positioningTop: leetifyResult.positioningTop,
-          utilityTop: leetifyResult.utilityTop,
-          openingTop: leetifyResult.openingTop,
-          clutchTop: leetifyResult.clutchTop,
+          premierElo: leetifyResult.premierElo,
+          recentMatches: leetifyResult.recentMatches,
         }
       : { reason: leetifyResult.reason },
     cs2Stats: cs2StatsResult.ok

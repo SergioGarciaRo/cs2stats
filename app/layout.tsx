@@ -1,9 +1,50 @@
 import './globals.css'
 import DonateButton from './DonateButton'
+import type { Metadata } from 'next'
 
-export const metadata = {
-  title: 'CS2 Stats',
-  description: 'CS2 stats viewer — FACEIT Level, hours, medals, inventory value and more',
+const SITE_URL = 'https://cs2stats-68cc.vercel.app'
+const SITE_NAME = 'CS2 Stats'
+const DEFAULT_TITLE = 'CS2 Stats – CS2 Player Stats Tracker & Legit Checker'
+const DEFAULT_DESC = 'Check any CS2 player stats instantly. View Premier rating, FACEIT level, K/D ratio, inventory value, VAC bans and detect smurfs or cheaters. Free CS2 stats tracker.'
+
+export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: DEFAULT_TITLE,
+    template: '%s | CS2 Stats',
+  },
+  description: DEFAULT_DESC,
+  keywords: [
+    'cs2 stats', 'cs2 player stats', 'cs2 tracker', 'check cs2 player stats',
+    'cs2 player lookup', 'cs2 legit checker', 'cs2 player analysis',
+    'cs2 stats tracker', 'cs2 steam id lookup', 'cs2 cheater checker',
+    'counter strike 2 stats', 'cs2 premier rating', 'cs2 faceit level',
+    'cs2 inventory value', 'cs2 smurf checker', 'cs2 vac ban checker',
+  ],
+  authors: [{ name: 'CS2 Stats' }],
+  creator: 'CS2 Stats',
+  publisher: 'CS2 Stats',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
+  },
+  openGraph: {
+    type: 'website',
+    siteName: SITE_NAME,
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESC,
+    url: SITE_URL,
+    images: [{ url: '/og-default.png', width: 1200, height: 630, alt: 'CS2 Stats Tracker' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESC,
+    images: ['/og-default.png'],
+  },
+  alternates: { canonical: SITE_URL },
+  verification: {},
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -34,6 +75,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </a>
 
             <a href="/" className="nav-link">🔍 Search</a>
+            <a href="/cs2-legit-checker" className="nav-link">🛡 Legit Checker</a>
             <a href="/top-viewed" className="nav-link viewed">👁 Most Viewed</a>
             <a href="/top-cheaters" className="nav-link suspected">⚠ Top Suspected</a>
             <div style={{ marginLeft: 'auto', fontSize: 12, color: '#fbbf24', fontFamily: 'monospace', fontWeight: 700 }}>v1.4.2</div>
