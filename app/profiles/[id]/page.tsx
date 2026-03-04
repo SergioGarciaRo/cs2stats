@@ -595,8 +595,8 @@ export default function ProfilePage() {
                       )}
                     </div>
 
-                    {/* Percentile bars: Aim / Positioning / Utility */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 20px' }}>
+                    {/* Percentile bars: Aim / Positioning / Utility — 3 columns */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px 16px', marginBottom: 14 }}>
                       {([
                         { label: 'Aim',         val: data.leetify.aim },
                         { label: 'Positioning', val: data.leetify.positioning },
@@ -604,8 +604,8 @@ export default function ProfilePage() {
                       ] as { label: string; val: number | null | undefined }[]).map((m) => (
                         <div key={m.label}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-                            <span style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{m.label}</span>
-                            <span style={{ fontSize: 15, fontWeight: 700, color: '#a78bfa' }}>
+                            <span style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{m.label}</span>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: '#a78bfa' }}>
                               {m.val != null ? `${m.val}%` : '—'}
                             </span>
                           </div>
@@ -614,12 +614,15 @@ export default function ProfilePage() {
                           </div>
                         </div>
                       ))}
-                      {/* Opening / Clutch raw ratings */}
+                    </div>
+
+                    {/* Opening / Clutch — 2 columns, value badges */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}>
                       {([
-                        { label: 'Opening', val: data.leetify.opening },
-                        { label: 'Clutch',  val: data.leetify.clutch },
+                        { label: 'Opening Duel', val: data.leetify.opening },
+                        { label: 'Clutch',       val: data.leetify.clutch },
                       ] as { label: string; val: number | null | undefined }[]).map((m) => (
-                        <div key={m.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div key={m.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{m.label}</span>
                           <span style={{ fontSize: 15, fontWeight: 700, color: m.val != null && m.val >= 0 ? '#4ade80' : '#f87171' }}>
                             {m.val != null ? (m.val > 0 ? `+${m.val}` : String(m.val)) : '—'}
