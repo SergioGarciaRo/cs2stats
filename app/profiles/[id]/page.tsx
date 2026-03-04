@@ -102,6 +102,8 @@ interface ProfileData {
     reason?: string
   } | null
   leetify?: { aim?: number | null; positioning?: number | null; utility?: number | null; overall?: number | null; reason?: string } | null
+  cs2Stats?: { kills?: number; deaths?: number; kd?: number; hsPct?: number; accuracy?: number; winRate?: number; mvps?: number; matchesPlayed?: number; reason?: string } | null
+  bans?: { communityBanned?: boolean; vacBanned?: boolean; numberOfVACBans?: number; numberOfGameBans?: number; daysSinceLastBan?: number; economyBan?: string; reason?: string } | null
   fetchedAt: number
   votes?: { yes: number; no: number }
 }
@@ -307,14 +309,33 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="card">
-                <div className="stat-label">VAC Ban</div>
-                <div style={{
-                  marginTop: 4, fontSize: 16, fontWeight: 700,
-                  color: data.profile.vacBanned ? 'var(--danger)' : 'var(--success)',
-                }}>
-                  {data.profile.vacBanned ? 'Banned' : 'Clean'}
-                </div>
+              <div className="card" style={{ borderLeft: data.bans?.vacBanned || (data.bans?.numberOfGameBans ?? 0) > 0 ? '3px solid var(--danger)' : undefined }}>
+                <div className="stat-label">Ban History</div>
+                {data.bans && !data.bans.reason ? (
+                  <div style={{ marginTop: 6 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: data.bans.vacBanned || (data.bans.numberOfGameBans ?? 0) > 0 ? 'var(--danger)' : 'var(--success)' }}>
+                      {data.bans.vacBanned || (data.bans.numberOfGameBans ?? 0) > 0 ? 'BANNED' : 'Clean'}
+                    </div>
+                    {(data.bans.numberOfVACBans ?? 0) > 0 && (
+                      <div style={{ fontSize: 12, color: '#f87171', marginTop: 4 }}>VAC Bans: {data.bans.numberOfVACBans}</div>
+                    )}
+                    {(data.bans.numberOfGameBans ?? 0) > 0 && (
+                      <div style={{ fontSize: 12, color: '#f87171', marginTop: 2 }}>Game Bans: {data.bans.numberOfGameBans}</div>
+                    )}
+                    {((data.bans.numberOfVACBans ?? 0) > 0 || (data.bans.numberOfGameBans ?? 0) > 0) && (
+                      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                        Last ban: {data.bans.daysSinceLastBan} days ago
+                      </div>
+                    )}
+                    {data.bans.economyBan && data.bans.economyBan !== 'none' && (
+                      <div style={{ fontSize: 11, color: '#fbbf24', marginTop: 2 }}>Trade: {data.bans.economyBan}</div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 4, fontSize: 15, fontWeight: 700, color: data.profile.vacBanned ? 'var(--danger)' : 'var(--success)' }}>
+                    {data.profile.vacBanned ? 'Banned' : 'Clean'}
+                  </div>
+                )}
               </div>
 
               {/* FACEIT card */}
@@ -420,6 +441,38 @@ export default function ProfilePage() {
                   )}
                 </div>
               </div>
+
+              {/* CS2 In-Game Stats */}
+              {data.cs2Stats && !data.cs2Stats.reason && (
+                <div className="card" style={{ marginTop: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                    <div className="stat-label" style={{ margin: 0 }}>CS2 Statistics</div>
+                    <span style={{ padding: '2px 8px', borderRadius: 6, background: 'rgba(99,179,237,0.12)', color: '#63b3ed', fontSize: 11, fontWeight: 600 }}>OFFICIAL</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                    {[
+                      { label: 'K/D Ratio',  val: data.cs2Stats.kd,          color: (data.cs2Stats.kd ?? 0) > 4 ? '#f87171' : '#fff',   flag: (data.cs2Stats.kd ?? 0) > 4 },
+                      { label: 'Headshot %', val: `${data.cs2Stats.hsPct}%`,  color: (data.cs2Stats.hsPct ?? 0) > 65 ? '#f87171' : '#fff', flag: (data.cs2Stats.hsPct ?? 0) > 65 },
+                      { label: 'Accuracy',   val: `${data.cs2Stats.accuracy}%`, color: (data.cs2Stats.accuracy ?? 0) > 35 ? '#f87171' : '#fff', flag: (data.cs2Stats.accuracy ?? 0) > 35 },
+                      { label: 'Win Rate',   val: `${data.cs2Stats.winRate}%`, color: '#fff', flag: false },
+                      { label: 'Total Kills', val: data.cs2Stats.kills?.toLocaleString(), color: '#fff', flag: false },
+                      { label: 'MVPs',       val: data.cs2Stats.mvps?.toLocaleString(), color: '#fff', flag: false },
+                    ].map((s) => (
+                      <div key={s.label} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${s.flag ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.06)'}`, borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+                        <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: s.color, marginTop: 4 }}>
+                          {s.flag && <span style={{ fontSize: 12, marginRight: 3 }}>⚠</span>}{s.val ?? '—'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {((data.cs2Stats.hsPct ?? 0) > 65 || (data.cs2Stats.kd ?? 0) > 4 || (data.cs2Stats.accuracy ?? 0) > 35) && (
+                    <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', fontSize: 12, color: '#f87171' }}>
+                      ⚠ Suspicious stats detected — unusually high values flagged in red
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Métricas Leetify */}
               <div className="card" style={{ marginTop: 16 }}>

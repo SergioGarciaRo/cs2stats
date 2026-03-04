@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:cs2stats-68cc.vercel.app)",
+      "Bash(curl -s -I \"https://cs2stats-68cc.vercel.app/\")",
+      "Bash(curl -s -I \"https://cs2stats-68cc.vercel.app/api/profile/76561198261520885\")",
+      "Bash(curl -s -I -H \"Origin: https://evil.com\" \"https://cs2stats-68cc.vercel.app/api/profile/76561198261520885\")",
+      "Bash(curl -s -I \"https://cs2stats-68cc.vercel.app/\" -H \"Origin: https://evil.com\")",
+      "Bash(curl -s \"https://cs2stats-68cc.vercel.app/api/profile/INVALID_ID_TEST\")",
+      "Bash(curl -s \"https://cs2stats-68cc.vercel.app/api/profile/../../etc/passwd\")",
+      "Bash(curl -s \"https://cs2stats-68cc.vercel.app/api/profile/%3Cscript%3Ealert\\(1\\)%3C%2Fscript%3E\")",
+      "Bash(curl -s \"https://cs2stats-68cc.vercel.app/api/profile/%27%20OR%20%271%27%3D%271\")",
+      "Bash(for i in 1 2 3 4 5 6 7 8 9 10)",
+      "Bash(do curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://cs2stats-68cc.vercel.app/api/profile/76561198261520885\")",
+      "Bash(done)",
+      "Bash(curl -s -X POST \"https://cs2stats-68cc.vercel.app/api/vote/76561198261520885\" -H \"Content-Type: application/json\" -d '{\"\"vote\"\":\"\"yes\"\",\"\"name\"\":\"\"test\"\",\"\"avatar\"\":\"\"\"\"}')",
+      "Bash(curl -s -X POST \"https://cs2stats-68cc.vercel.app/api/vote/76561198261520885\" -H \"Content-Type: application/json\" -d '{\"\"vote\"\":\"\"yes\"\",\"\"name\"\":\"\"<script>alert\\(1\\)</script>\"\",\"\"avatar\"\":\"\"javascript:alert\\(1\\)\"\"}')",
+      "Bash(curl -s -X POST \"https://cs2stats-68cc.vercel.app/api/vote/76561198261520885\" -H \"Content-Type: application/json\" -H \"X-Forwarded-For: 192.168.99.99\" -d '{\"\"vote\"\":\"\"yes\"\",\"\"name\"\":\"\"test\"\",\"\"avatar\"\":\"\"\"\"}')",
+      "Bash(curl -s -X POST \"https://cs2stats-68cc.vercel.app/api/vote/76561198261520885\" -H \"Content-Type: application/json\" -H \"X-Real-IP: 10.0.0.1\" -d '{\"\"vote\"\":\"\"no\"\",\"\"name\"\":\"\"attacker\"\",\"\"avatar\"\":\"\"\"\"}')",
+      "Bash(curl -s -X POST \"https://cs2stats-68cc.vercel.app/api/vote/76561198261520885\" -H \"Content-Type: application/json\" -H \"CF-Connecting-IP: 1.2.3.4\" -d '{\"\"vote\"\":\"\"no\"\",\"\"name\"\":\"\"attacker2\"\",\"\"avatar\"\":\"\"\"\"}')",
+      "Bash(curl -s -I \"https://cs2stats-68cc.vercel.app/api/vote/76561198261520885\")",
+      "Bash(curl -s \"https://cs2stats-68cc.vercel.app/api/profile/%3B%20ls\")",
+      "Bash(curl -s -v -X OPTIONS \"https://cs2stats-68cc.vercel.app/api/profile/76561198261520885\" -H \"Origin: https://evil.com\" -H \"Access-Control-Request-Method: POST\")",
+      "Bash(curl -s \"https://cs2stats-68cc.vercel.app/api/profile/%22%3E%3Cimg%20src%3Dx%20onerror%3Dalert\\(1\\)%3E\")",
+      "Bash(curl -s \"https://cs2stats-68cc.vercel.app/api/profile/{{7*7}}\")",
+      "Bash(curl -s \"https://cs2stats-68cc.vercel.app/api/profile/%24%7B7*7%7D\")",
+      "Bash(curl -s -I \"https://cs2stats-68cc.vercel.app/api/top-profiles\")",
+      "Bash(curl -s -I \"https://cs2stats-68cc.vercel.app/_next/static/chunks/app/page.js\")",
+      "Bash(curl -s \"https://cs2stats-68cc.vercel.app/api/profile/76561198261520885\" -H \"Accept-Encoding: gzip\" -w \"\\\\n\\\\nStatus: %{http_code}\\\\nTime: %{time_total}s\\\\n\" -o /dev/null)",
+      "Bash(node -e \":*)",
+      "Bash(powershell -Command \"Set-Content -Path ''C:\\\\Users\\\\Sergio\\\\Desktop\\\\SteamAliasApp\\\\app\\\\api\\\\vote\\\\[id]\\\\route.ts'' -Encoding UTF8 -Value @'':*)",
+      "Bash(python3 -c \":*)"
+    ]
+  }
+}

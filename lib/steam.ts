@@ -290,6 +290,79 @@ export async function fetchInventoryValue(steamId: string) {
   }
 }
 
+// ─── CS2 In-Game Stats (Steam Web API) ────────────────────────────────────
+
+export async function fetchCS2Stats(steamId: string) {
+  const apiKey = process.env.STEAM_API_KEY
+  if (!apiKey) return { ok: false, reason: 'no_api_key' }
+  try {
+    const res = await fetch(
+      `https://api.steampowered.com/ISteamUserStats/GetUserStatsForGame/v2/?appid=730&key=${apiKey}&steamid=${steamId}`,
+      { headers: { 'User-Agent': 'Mozilla/5.0' } }
+    )
+    if (res.status === 403) return { ok: false, reason: 'private' }
+    if (!res.ok) return { ok: false, reason: `steam_${res.status}` }
+
+    const j = await res.json()
+    const stats: Array<{ name: string; value: number }> = j?.playerstats?.stats ?? []
+    const get = (name: string) => stats.find(s => s.name === name)?.value ?? 0
+
+    const kills        = get('total_kills')
+    const deaths       = get('total_deaths')
+    const hsKills      = get('total_kills_headshot')
+    const shotsFired   = get('total_shots_fired')
+    const shotsHit     = get('total_shots_hit')
+    const wins         = get('total_wins')
+    const roundsPlayed = get('total_rounds_played')
+    const mvps         = get('total_mvps')
+    const matchesPlayed = get('total_matches_played')
+
+    return {
+      ok: true,
+      kills,
+      deaths,
+      kd:          deaths > 0 ? Math.round((kills / deaths) * 100) / 100 : kills,
+      hsPct:       kills > 0  ? Math.round((hsKills / kills) * 100)      : 0,
+      accuracy:    shotsFired > 0 ? Math.round((shotsHit / shotsFired) * 100) : 0,
+      winRate:     roundsPlayed > 0 ? Math.round((wins / roundsPlayed) * 100) : 0,
+      wins,
+      roundsPlayed,
+      mvps,
+      matchesPlayed,
+    }
+  } catch (e) {
+    return { ok: false, reason: String(e) }
+  }
+}
+
+// ─── Detailed Ban History (Steam Web API) ─────────────────────────────────
+
+export async function fetchPlayerBans(steamId: string) {
+  const apiKey = process.env.STEAM_API_KEY
+  if (!apiKey) return { ok: false, reason: 'no_api_key' }
+  try {
+    const res = await fetch(
+      `https://api.steampowered.com/ISteamUser/GetPlayerBans/v1/?key=${apiKey}&steamids=${steamId}`,
+      { headers: { 'User-Agent': 'Mozilla/5.0' } }
+    )
+    if (!res.ok) return { ok: false, reason: `steam_${res.status}` }
+    const j = await res.json()
+    const p = j?.players?.[0]
+    if (!p) return { ok: false, reason: 'not_found' }
+    return {
+      ok: true,
+      communityBanned:  p.CommunityBanned  as boolean,
+      vacBanned:        p.VACBanned        as boolean,
+      numberOfVACBans:  p.NumberOfVACBans  as number,
+      numberOfGameBans: p.NumberOfGameBans as number,
+      daysSinceLastBan: p.DaysSinceLastBan as number,
+      economyBan:       p.EconomyBan       as string, // 'none' | 'probation' | 'banned'
+    }
+  } catch (e) {
+    return { ok: false, reason: String(e) }
+  }
+}
+
 // ─── Leetify Rating ────────────────────────────────────────────────────────
 
 export async function fetchLeetifyRating(steamId: string) {
