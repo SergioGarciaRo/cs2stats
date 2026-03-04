@@ -437,26 +437,39 @@ export default function ProfilePage() {
 
             {/* Columna derecha */}
             <div>
-              {/* CS2 + FACEIT cards */}
-              <div className="big-cards">
-                <div className="big-card card">
-                  <h3 style={{ color: 'var(--accent)', margin: '0 0 10px 0', fontSize: 15 }}>CS2 / Premier</h3>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: '#fff' }}>
-                    {data.cs2.ok ? data.cs2.hours : '—'}
+              {/* CS2 Hours + recent matches from Leetify */}
+              <div className="card" style={{ marginBottom: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+                  <div>
+                    <div className="stat-label" style={{ margin: '0 0 4px 0' }}>CS2 Hours</div>
+                    <div style={{ fontSize: 32, fontWeight: 800, color: '#fff', lineHeight: 1 }}>
+                      {data.cs2.ok ? data.cs2.hours : '—'}
+                    </div>
+                    {!data.cs2.ok && (
+                      <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
+                        {data.cs2.reason || 'Private profile or no data'}
+                      </div>
+                    )}
                   </div>
-                  {!data.cs2.ok && (
-                    <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
-                      {data.cs2.reason || 'Private profile or no data'}
+                  {data.leetify?.recentMatches && data.leetify.recentMatches.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>Recent matches</div>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        {(data.leetify.recentMatches as string[]).slice(0, 8).map((r: string, i: number) => (
+                          <div key={i} style={{
+                            width: 26, height: 26, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 11, fontWeight: 700,
+                            background: r === 'win' ? 'rgba(74,222,128,0.12)' : 'rgba(248,113,113,0.12)',
+                            color: r === 'win' ? '#4ade80' : '#f87171',
+                            border: `1px solid ${r === 'win' ? 'rgba(74,222,128,0.25)' : 'rgba(248,113,113,0.25)'}`,
+                          }}>
+                            {r === 'win' ? 'W' : 'L'}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
-                  <div className="recent-performance" style={{ marginTop: 14 }}>
-                    {['W','W','L','W','L','L','W','W'].map((r, i) => (
-                      <div key={i} className={r === 'W' ? 'win' : 'loss'}>{r}</div>
-                    ))}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>Recent matches (placeholder)</div>
                 </div>
-
               </div>
 
               {/* CS2 In-Game Stats */}
@@ -580,25 +593,6 @@ export default function ProfilePage() {
                           <div style={{ fontSize: 28, fontWeight: 800, color: '#fff', lineHeight: 1 }}>{data.leetify.premierElo.toLocaleString()}</div>
                         </div>
                       )}
-                      {/* Recent matches from Leetify */}
-                      {data.leetify.recentMatches && data.leetify.recentMatches.length > 0 && (
-                        <div>
-                          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>Recent</div>
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            {(data.leetify.recentMatches as string[]).slice(0, 8).map((r: string, i: number) => (
-                              <div key={i} style={{
-                                width: 22, height: 22, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: 10, fontWeight: 700,
-                                background: r === 'win' ? 'rgba(74,222,128,0.15)' : 'rgba(248,113,113,0.15)',
-                                color: r === 'win' ? '#4ade80' : '#f87171',
-                                border: `1px solid ${r === 'win' ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)'}`,
-                              }}>
-                                {r === 'win' ? 'W' : 'L'}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
 
                     {/* Percentile bars: Aim / Positioning / Utility */}
@@ -639,58 +633,6 @@ export default function ProfilePage() {
                     No Leetify data — profile may be private or not registered
                   </div>
                 )}
-              </div>
-
-              {/* ── Medallas CS2 ───────────────────────────────────── */}
-              <div className="card" style={{ marginTop: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                  <div className="stat-label" style={{ margin: 0 }}>CS2 Medals</div>
-                  <span style={{ padding: '2px 8px', borderRadius: 6, background: 'rgba(234,179,8,0.12)', color: '#fbbf24', fontSize: 11, fontWeight: 600 }}>
-                    CS2
-                  </span>
-                </div>
-
-                {data.medals?.reason === 'private' && (
-                  <div style={{ color: 'var(--muted)', fontSize: 13 }}>Private profile — medals not visible</div>
-                )}
-
-                {data.medals?.items && data.medals.items.length > 0 ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
-                    {data.medals.items.map((m, i) => (
-                      <div key={i} style={{
-                        background: 'rgba(255,255,255,0.03)',
-                        border: '1px solid rgba(255,184,0,0.15)',
-                        borderRadius: 10, padding: '12px',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-                        textAlign: 'center',
-                      }}>
-                        {m.icon ? (
-                          <img src={m.icon} alt={m.name} style={{ width: 64, height: 64, objectFit: 'contain' }} />
-                        ) : (
-                          <div style={{ width: 64, height: 64, background: 'rgba(251,191,36,0.1)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>🏅</div>
-                        )}
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.3 }}>{m.name}</div>
-                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
-                          {m.level !== '1' && (
-                            <span style={{ padding: '2px 7px', borderRadius: 5, background: 'rgba(251,191,36,0.15)', color: '#fbbf24', fontSize: 11, fontWeight: 600 }}>
-                              Lv.{m.level}
-                            </span>
-                          )}
-                          {m.xp !== '0' && (
-                            <span style={{ padding: '2px 7px', borderRadius: 5, background: 'rgba(255,255,255,0.05)', color: 'var(--muted)', fontSize: 11 }}>
-                              {m.xp} XP
-                            </span>
-                          )}
-                        </div>
-                        {m.unlocked && (
-                          <div style={{ fontSize: 10, color: 'var(--muted)', lineHeight: 1.2 }}>{m.unlocked}</div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : data.medals && !data.medals.reason ? (
-                  <div style={{ color: 'var(--muted)', fontSize: 13 }}>No CS2 medals</div>
-                ) : null}
               </div>
 
               {/* Debug */}

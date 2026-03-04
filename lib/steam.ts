@@ -483,9 +483,9 @@ export async function fetchLeetifyRating(steamId: string) {
     function pct(v: unknown): number | null {
       return typeof v === 'number' ? Math.round(v) : null
     }
-    // leetify/opening/clutch are raw floats (e.g. -0.014); show as rounded 2-decimal
+    // leetify/opening/clutch are raw floats (e.g. -0.0141); show as 3 decimal places
     function r2(v: unknown): number | null {
-      return typeof v === 'number' ? Math.round(v * 100) / 100 : null
+      return typeof v === 'number' ? Math.round(v * 1000) / 1000 : null
     }
 
     // Premier rank from ranks array
