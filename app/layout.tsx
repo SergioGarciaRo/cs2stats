@@ -36,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <a href="/" className="nav-link">🔍 Search</a>
             <a href="/top-viewed" className="nav-link viewed">👁 Most Viewed</a>
             <a href="/top-cheaters" className="nav-link suspected">⚠ Top Suspected</a>
+            <div style={{ marginLeft: 'auto', fontSize: 11, color: '#3f3f46', fontFamily: 'monospace' }}>v1.4.0</div>
           </div>
         </nav>
 
