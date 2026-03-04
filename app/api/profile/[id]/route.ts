@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { fetchSteamProfile, fetchCS2Hours, resolveVanity, fetchFaceitLevel, fetchCS2Medals, fetchInventoryValue, fetchLeetifyRating, fetchCS2Stats, fetchPlayerBans } from '../../../../lib/steam'
+import { fetchSteamProfile, fetchCS2Hours, resolveVanity, fetchFaceitLevel, fetchCS2Medals, fetchInventoryValue, fetchLeetifyRating, fetchCS2Stats, fetchPlayerBans, fetchFaceitMatchHistory } from '../../../../lib/steam'
 import { getCache, setCache } from '../../../../lib/cache'
 import { isRateLimited } from '../../../../lib/rateLimiter'
 import { recordView } from '../../../../lib/viewTracker'
@@ -25,7 +25,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 
   // Fetch all data in parallel
-  const [prof, cs2, faceitResult, medalsResult, inventoryResult, leetifyResult, cs2StatsResult, bansResult] = await Promise.all([
+  const [prof, cs2, faceitResult, medalsResult, inventoryResult, leetifyResult, cs2StatsResult, bansResult, matchHistoryResult] = await Promise.all([
     fetchSteamProfile(id),
     fetchCS2Hours(id),
     fetchFaceitLevel(id),
@@ -34,6 +34,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     fetchLeetifyRating(id),
     fetchCS2Stats(id),
     fetchPlayerBans(id),
+    fetchFaceitMatchHistory(id),
   ])
 
   if (!prof.ok || !prof.profile) return NextResponse.json({ error: 'profile_not_found' }, { status: 502 })
@@ -89,6 +90,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           marketableItems: inventoryResult.marketableItems,
           approximateValueUSD: inventoryResult.approximateValueUSD,
           isPartial: inventoryResult.isPartial,
+          topSkins: inventoryResult.topSkins,
         }
       : { reason: inventoryResult.reason },
     leetify: leetifyResult.ok
@@ -100,6 +102,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     bans: bansResult.ok
       ? { communityBanned: bansResult.communityBanned, vacBanned: bansResult.vacBanned, numberOfVACBans: bansResult.numberOfVACBans, numberOfGameBans: bansResult.numberOfGameBans, daysSinceLastBan: bansResult.daysSinceLastBan, economyBan: bansResult.economyBan }
       : { reason: bansResult.reason },
+    matchHistory: matchHistoryResult.ok
+      ? { matches: matchHistoryResult.matches }
+      : { reason: matchHistoryResult.reason },
     fetchedAt: Date.now(),
   }
 

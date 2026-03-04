@@ -1,6 +1,16 @@
 "use client"
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
+import dynamic from 'next/dynamic'
+import MapStatsTable from '../../../components/MapStatsTable'
+import InventoryValue from '../../../components/InventoryValue'
+import PurchasedAccountRisk from '../../../components/PurchasedAccountRisk'
+
+// Recharts uses browser APIs — skip SSR
+const PerformanceCharts = dynamic(
+  () => import('../../../components/PerformanceCharts'),
+  { ssr: false }
+)
 
 function VoteSection({ steamId, name, avatar, initialYes, initialNo }: {
   steamId: string; name: string; avatar: string; initialYes: number; initialNo: number
@@ -72,6 +82,17 @@ function VoteSection({ steamId, name, avatar, initialYes, initialNo }: {
   )
 }
 
+interface MatchStats {
+  matchId: string
+  date: string
+  map: string
+  kd: number
+  adr: number
+  hsPercent: number
+  win: boolean
+  kills: number
+}
+
 interface Medal {
   name: string
   xp: string
@@ -99,11 +120,13 @@ interface ProfileData {
     marketableItems?: number
     approximateValueUSD?: number
     isPartial?: boolean
+    topSkins?: Array<{ name: string; price: number; icon: string }>
     reason?: string
   } | null
   leetify?: { aim?: number | null; positioning?: number | null; utility?: number | null; overall?: number | null; reason?: string } | null
   cs2Stats?: { kills?: number; deaths?: number; kd?: number; hsPct?: number; accuracy?: number; winRate?: number; mvps?: number; matchesPlayed?: number; reason?: string } | null
   bans?: { communityBanned?: boolean; vacBanned?: boolean; numberOfVACBans?: number; numberOfGameBans?: number; daysSinceLastBan?: number; economyBan?: string; reason?: string } | null
+  matchHistory?: { matches?: MatchStats[]; reason?: string } | null
   fetchedAt: number
   votes?: { yes: number; no: number }
 }
@@ -283,6 +306,9 @@ export default function ProfilePage() {
               {data.leetify?.overall != null && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>overall score</div>}
             </div>
           </div>
+
+          {/* ── Purchased Account Risk ──────────────────────────────── */}
+          <PurchasedAccountRisk steamId={data.profile.steamId} />
 
           {/* ── Grid principal ──────────────────────────────────────── */}
           <div className="page-grid">
@@ -590,6 +616,55 @@ export default function ProfilePage() {
               )}
             </div>
           </div>
+
+          {/* ── Performance Evolution ───────────────────────────────── */}
+          <div style={{ marginTop: 32 }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 16 }}>
+              Performance Evolution
+            </div>
+            {data.matchHistory?.matches && data.matchHistory.matches.length > 0
+              ? <PerformanceCharts matches={data.matchHistory.matches} />
+              : (
+                <div className="card">
+                  <div style={{ color: 'var(--muted)', fontSize: 13 }}>
+                    {data.matchHistory?.reason === 'no_faceit_account'
+                      ? 'No FACEIT account linked — match history unavailable'
+                      : 'No match history available'}
+                  </div>
+                </div>
+              )
+            }
+          </div>
+
+          {/* ── Map Performance ─────────────────────────────────────── */}
+          <div style={{ marginTop: 24 }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 16 }}>
+              Map Performance
+            </div>
+            {data.matchHistory?.matches && data.matchHistory.matches.length > 0
+              ? <MapStatsTable matches={data.matchHistory.matches} />
+              : (
+                <div className="card">
+                  <div style={{ color: 'var(--muted)', fontSize: 13 }}>No map statistics available</div>
+                </div>
+              )
+            }
+          </div>
+
+          {/* ── Inventory Value ─────────────────────────────────────── */}
+          {(data.inventory?.topSkins?.length || data.inventory?.approximateValueUSD) && (
+            <div style={{ marginTop: 24 }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 16 }}>
+                Inventory Value
+              </div>
+              <InventoryValue
+                totalValue={data.inventory.approximateValueUSD}
+                topSkins={data.inventory.topSkins}
+                totalItems={data.inventory.totalItems}
+                isPrivate={!!data.inventory.reason}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

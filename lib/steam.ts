@@ -236,11 +236,13 @@ export async function fetchInventoryValue(steamId: string) {
 
     const totalItems: number = data.total_inventory_count ?? 0;
 
-    // Build map: classid+instanceid → market_hash_name, count
+    // Build map: classid+instanceid → market_hash_name + icon
     const descMap = new Map<string, string>();
+    const iconMap = new Map<string, string>(); // market_hash_name → icon_url
     for (const d of data.descriptions) {
       if (d.marketable === 1 && d.market_hash_name) {
         descMap.set(`${d.classid}_${d.instanceid}`, d.market_hash_name);
+        if (d.icon_url) iconMap.set(d.market_hash_name, d.icon_url as string);
       }
     }
 
@@ -256,6 +258,7 @@ export async function fetchInventoryValue(steamId: string) {
     const uniqueNames = [...itemCount.keys()].slice(0, 20);
     let totalUSD = 0;
     let priced = 0;
+    const itemPrices = new Map<string, number>(); // name → unit price
 
     for (const name of uniqueNames) {
       try {
@@ -270,12 +273,24 @@ export async function fetchInventoryValue(steamId: string) {
         const price = parseFloat(priceStr.replace(/[^0-9.]/g, ''));
         if (!isNaN(price)) {
           totalUSD += price * (itemCount.get(name) ?? 1);
+          itemPrices.set(name, price);
           priced++;
         }
         // Small delay between requests to respect rate limits
         await new Promise(r => setTimeout(r, 200));
       } catch {}
     }
+
+    const topSkins = [...itemPrices.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, price]) => ({
+        name,
+        price,
+        icon: iconMap.get(name)
+          ? `https://community.akamai.steamstatic.com/economy/image/${iconMap.get(name)}`
+          : '',
+      }));
 
     return {
       ok: true,
@@ -284,6 +299,7 @@ export async function fetchInventoryValue(steamId: string) {
       pricedItems: priced,
       approximateValueUSD: Math.round(totalUSD * 100) / 100,
       isPartial: uniqueNames.length < itemCount.size,
+      topSkins,
     };
   } catch (e) {
     return { ok: false, reason: String(e) };
@@ -358,6 +374,70 @@ export async function fetchPlayerBans(steamId: string) {
       daysSinceLastBan: p.DaysSinceLastBan as number,
       economyBan:       p.EconomyBan       as string, // 'none' | 'probation' | 'banned'
     }
+  } catch (e) {
+    return { ok: false, reason: String(e) }
+  }
+}
+
+// ─── FACEIT Match History ─────────────────────────────────────────────────
+
+export interface MatchStats {
+  matchId: string
+  date: string
+  map: string
+  kd: number
+  adr: number
+  hsPercent: number
+  win: boolean
+  kills: number
+}
+
+export async function fetchFaceitMatchHistory(steamId: string): Promise<
+  { ok: true; matches: MatchStats[] } | { ok: false; reason: string }
+> {
+  const apiKey = process.env.FACEIT_API_KEY
+  if (!apiKey) return { ok: false, reason: 'no_api_key' }
+  try {
+    // Step 1: resolve FACEIT player_id from Steam ID
+    const playerRes = await fetch(
+      `https://open.faceit.com/data/v4/players?game=cs2&game_player_id=${steamId}`,
+      { headers: { Authorization: `Bearer ${apiKey}` } }
+    )
+    if (!playerRes.ok) return { ok: false, reason: 'no_faceit_account' }
+    const playerData = await playerRes.json()
+    const playerId: string = playerData?.player_id
+    if (!playerId) return { ok: false, reason: 'no_faceit_account' }
+
+    // Step 2: fetch last 30 match stats
+    const statsRes = await fetch(
+      `https://open.faceit.com/data/v4/players/${playerId}/games/cs2/stats?limit=30`,
+      { headers: { Authorization: `Bearer ${apiKey}` } }
+    )
+    if (!statsRes.ok) return { ok: false, reason: `faceit_${statsRes.status}` }
+    const statsData = await statsRes.json()
+
+    const matches: MatchStats[] = (statsData?.items ?? []).map((item: any) => {
+      const s = item.stats ?? {}
+      const kd        = parseFloat(s['K/D Ratio']      ?? '0')
+      const adr       = parseFloat(s['ADR']             ?? s['Average Damage per Round'] ?? '0')
+      const hsPercent = parseFloat(s['Headshots %']     ?? '0')
+      const kills     = parseInt(s['Kills']             ?? '0', 10)
+      const win       = s['Result'] === '1' || s['Win'] === '1'
+      const ts        = item.created_at ?? 0
+      const date      = new Date(ts > 1e12 ? ts : ts * 1000).toISOString().slice(0, 10)
+      const rawMap    = (s['Map'] ?? 'unknown').replace(/^de_/, '').replace(/^cs_/, '')
+      return {
+        matchId:   s['Match Id'] ?? String(ts),
+        date,
+        map:       rawMap.charAt(0).toUpperCase() + rawMap.slice(1),
+        kd:        isNaN(kd)        ? 0 : kd,
+        adr:       isNaN(adr)       ? 0 : adr,
+        hsPercent: isNaN(hsPercent) ? 0 : hsPercent,
+        kills:     isNaN(kills)     ? 0 : kills,
+        win,
+      }
+    })
+    return { ok: true, matches }
   } catch (e) {
     return { ok: false, reason: String(e) }
   }
