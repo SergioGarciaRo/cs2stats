@@ -81,6 +81,24 @@ export async function fetchCS2Hours(steamId: string) {
     const m = /(Counter-Strike 2|Counter-Strike: Global Offensive)[\s\S]{0,200}?([0-9][0-9,]*\.?[0-9]*) hrs/i.exec(html);
     if (m) return { ok: true, hours: m[2].replace(/,/g, '') + ' hrs' };
 
+    // Fallback: GetOwnedGames Steam API
+    const apiKey = process.env.STEAM_API_KEY;
+    if (apiKey) {
+      try {
+        const res = await fetch(
+          `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${apiKey}&steamid=${steamId}&include_appinfo=false&include_played_free_games=true`
+        );
+        if (res.ok) {
+          const j = await res.json();
+          const cs2 = (j?.response?.games ?? []).find((g: { appid: number }) => g.appid === 730);
+          if (cs2?.playtime_forever) {
+            const hrs = Math.floor(cs2.playtime_forever / 60);
+            return { ok: true, hours: `${hrs} hrs` };
+          }
+        }
+      } catch {}
+    }
+
     return { ok: false, reason: 'Profile may be private or game list hidden' };
   } catch (e) {
     return { ok: false, reason: String(e) };
