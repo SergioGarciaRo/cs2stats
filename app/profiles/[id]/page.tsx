@@ -692,8 +692,9 @@ export default function ProfilePage() {
 
           {/* ── Map Performance ─────────────────────────────────────── */}
           <div style={{ marginTop: 24 }}>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 16 }}>
-              Map Performance
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 16 }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#fff' }}>Map Performance</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)' }}>last 30 FACEIT matches</div>
             </div>
             {data.matchHistory?.matches && data.matchHistory.matches.length > 0
               ? <MapStatsTable matches={data.matchHistory.matches} />
