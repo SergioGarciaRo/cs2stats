@@ -461,13 +461,47 @@ export async function fetchLeetifyRating(steamId: string) {
 
     if (!r) return { ok: false, reason: 'no_ratings' };
 
+    // Helper to extract top-% percentile from playerRankings (value 0–1 or 0–100)
+    const pr = j?.playerRankings ?? {}
+    function topPct(key: string): number | null {
+      const v = pr[key]?.rank ?? pr[key]
+      if (typeof v !== 'number') return null
+      // Leetify returns 0–1 fraction (e.g. 0.46 = Top 46%)
+      return v <= 1 ? Math.round(v * 100) : Math.round(v)
+    }
+
+    // Round to 1 decimal (Opening/Clutch are on a 0–10 scale)
+    function r1(v: unknown): number | null {
+      return typeof v === 'number' ? Math.round(v * 10) / 10 : null
+    }
+
+    const overall =
+      typeof r.overall    === 'number' ? r1(r.overall)    :
+      typeof j.appRating  === 'number' ? r1(j.appRating)  : null
+
     return {
       ok: true,
-      aim:         typeof r.aim         === 'number' ? Math.round(r.aim)         : null,
-      positioning: typeof r.positioning === 'number' ? Math.round(r.positioning) : null,
-      utility:     typeof r.utility     === 'number' ? Math.round(r.utility)     : null,
-      overall:     typeof r.overall     === 'number' ? Math.round(r.overall)
-                 : typeof j?.appRating  === 'number' ? Math.round(j.appRating)   : null,
+      // Core metrics
+      aim:            r1(r.aim),
+      positioning:    r1(r.positioning),
+      utility:        r1(r.utility),
+      opening:        r1(r.opening   ?? r.firefight),
+      clutch:         r1(r.clutch),
+      overall,
+      // Side-specific ratings
+      ctRating: typeof j.ctRating   === 'number' ? r1(j.ctRating)   :
+                typeof j.ctAppRating === 'number' ? r1(j.ctAppRating): null,
+      tRating:  typeof j.tRating    === 'number' ? r1(j.tRating)    :
+                typeof j.tAppRating  === 'number' ? r1(j.tAppRating) : null,
+      // Context
+      gameCount:  typeof j.gameCount  === 'number' ? j.gameCount  : null,
+      roundCount: typeof j.roundCount === 'number' ? j.roundCount : null,
+      // Top-% percentiles
+      aimTop:         topPct('aim'),
+      positioningTop: topPct('positioning'),
+      utilityTop:     topPct('utility'),
+      openingTop:     topPct('opening') ?? topPct('firefight'),
+      clutchTop:      topPct('clutch'),
     };
   } catch (e) {
     return { ok: false, reason: String(e) };

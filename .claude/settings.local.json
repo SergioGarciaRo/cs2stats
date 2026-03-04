@@ -33,7 +33,17 @@
       "Bash(npx tsc --noEmit)",
       "Bash(curl -s \"https://cs2stats-68cc.vercel.app/api/profile/76561198260035986\")",
       "Bash(python3 -m json.tool)",
-      "Bash(npm install recharts)"
+      "Bash(npm install recharts)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(''cs2Stats:'', d.get\\(''cs2Stats''\\)\\); print\\(''matchHistory keys:'', list\\(d.get\\(''matchHistory'',{}\\).keys\\(\\)\\) if d.get\\(''matchHistory''\\) else ''none''\\)\")",
+      "Bash(node -e \"const d=JSON.parse\\(require\\(''fs''\\).readFileSync\\(''/dev/stdin'',''utf8''\\)\\); console.log\\(''cs2Stats:'',JSON.stringify\\(d.cs2Stats\\)\\); console.log\\(''matchHistory reason:'',d.matchHistory?.reason, ''count:'', d.matchHistory?.matches?.length\\)\")",
+      "Bash(curl -s \"https://cs2stats-68cc.vercel.app/api/profile/76561198260035986\" -o C:tempprofile.json)",
+      "Bash(node -e \"const d=require\\(''C:/temp/profile.json''\\); console.log\\(''cs2Stats:'',JSON.stringify\\(d.cs2Stats\\)\\); console.log\\(''matchHistory:'',d.matchHistory?.reason ?? ''matches:''+d.matchHistory?.matches?.length\\)\")",
+      "Bash(curl -s \"https://cs2stats-68cc.vercel.app/api/profile/76561198260035986\" -o profile_tmp.json)",
+      "Bash(node -e \"const d=require\\(''./profile_tmp.json''\\); console.log\\(''cs2Stats:'',JSON.stringify\\(d.cs2Stats\\)\\); console.log\\(''matchHistory reason:'',d.matchHistory?.reason,''matches:'',d.matchHistory?.matches?.length\\); console.log\\(''medals count:'',d.medals?.items?.length\\)\")",
+      "Bash(node -e \"const d=require\\(''./profile_tmp.json''\\); console.log\\(''medals:'', JSON.stringify\\(d.medals?.items?.map\\(m=>m.name\\)\\)\\); console.log\\(''matchHistory sample:'', JSON.stringify\\(d.matchHistory?.matches?.slice\\(0,2\\)\\)\\)\")",
+      "Bash(curl -s \"https://steamcommunity.com/profiles/76561198260035986/badges/\" -A \"Mozilla/5.0\")",
+      "Bash(curl -s \"https://steamcommunity.com/profiles/76561198260035986/gamecards/730/\" -A \"Mozilla/5.0\")",
+      "Bash(grep -n -i \"rank\\\\|season\\\\|premier\" app/profiles/[id]/page.tsx)"
     ]
   }
 }

@@ -94,7 +94,23 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         }
       : { reason: inventoryResult.reason },
     leetify: leetifyResult.ok
-      ? { aim: leetifyResult.aim, positioning: leetifyResult.positioning, utility: leetifyResult.utility, overall: leetifyResult.overall }
+      ? {
+          aim: leetifyResult.aim,
+          positioning: leetifyResult.positioning,
+          utility: leetifyResult.utility,
+          opening: leetifyResult.opening,
+          clutch: leetifyResult.clutch,
+          overall: leetifyResult.overall,
+          ctRating: leetifyResult.ctRating,
+          tRating: leetifyResult.tRating,
+          gameCount: leetifyResult.gameCount,
+          roundCount: leetifyResult.roundCount,
+          aimTop: leetifyResult.aimTop,
+          positioningTop: leetifyResult.positioningTop,
+          utilityTop: leetifyResult.utilityTop,
+          openingTop: leetifyResult.openingTop,
+          clutchTop: leetifyResult.clutchTop,
+        }
       : { reason: leetifyResult.reason },
     cs2Stats: cs2StatsResult.ok
       ? { kills: cs2StatsResult.kills, deaths: cs2StatsResult.deaths, kd: cs2StatsResult.kd, hsPct: cs2StatsResult.hsPct, accuracy: cs2StatsResult.accuracy, winRate: cs2StatsResult.winRate, mvps: cs2StatsResult.mvps, matchesPlayed: cs2StatsResult.matchesPlayed }
