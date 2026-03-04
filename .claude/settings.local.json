@@ -29,7 +29,8 @@
       "Bash(curl -s \"https://cs2stats-68cc.vercel.app/api/profile/76561198261520885\" -H \"Accept-Encoding: gzip\" -w \"\\\\n\\\\nStatus: %{http_code}\\\\nTime: %{time_total}s\\\\n\" -o /dev/null)",
       "Bash(node -e \":*)",
       "Bash(powershell -Command \"Set-Content -Path ''C:\\\\Users\\\\Sergio\\\\Desktop\\\\SteamAliasApp\\\\app\\\\api\\\\vote\\\\[id]\\\\route.ts'' -Encoding UTF8 -Value @'':*)",
-      "Bash(python3 -c \":*)"
+      "Bash(python3 -c \":*)",
+      "Bash(npx tsc --noEmit)"
     ]
   }
 }

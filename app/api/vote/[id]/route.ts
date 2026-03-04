@@ -3,7 +3,7 @@ import { submitVote } from '../../../../lib/voteTracker'
 import { getIp } from '../../../../lib/getIp'
 
 const MAX_NAME_LEN = 64
-const STEAM_AVATAR_RE = /^https://(avatars.steamstatic.com|cdn.akamai.steamstatic.com|steamcdn-a.akamaihd.net|community.cloudflare.steamstatic.com)//
+const STEAM_AVATAR_RE = new RegExp('^https://(avatars.steamstatic.com|cdn.akamai.steamstatic.com|steamcdn-a.akamaihd.net|community.cloudflare.steamstatic.com)/')
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const id = params.id

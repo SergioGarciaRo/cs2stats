@@ -52,17 +52,19 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     } catch {}
   }
   if (bansResult.ok) {
-    if (bansResult.numberOfVACBans > 0) { riskScore += 40; riskReasons.push(`${bansResult.numberOfVACBans} VAC ban(s)`) }
-    if (bansResult.numberOfGameBans > 0) { riskScore += 30; riskReasons.push(`${bansResult.numberOfGameBans} game ban(s)`) }
-    if ((bansResult.numberOfVACBans > 0 || bansResult.numberOfGameBans > 0) && bansResult.daysSinceLastBan < 365) {
+    const b = bansResult as { ok: true; numberOfVACBans: number; numberOfGameBans: number; daysSinceLastBan: number; economyBan: string }
+    if (b.numberOfVACBans > 0) { riskScore += 40; riskReasons.push(`${b.numberOfVACBans} VAC ban(s)`) }
+    if (b.numberOfGameBans > 0) { riskScore += 30; riskReasons.push(`${b.numberOfGameBans} game ban(s)`) }
+    if ((b.numberOfVACBans > 0 || b.numberOfGameBans > 0) && b.daysSinceLastBan < 365) {
       riskScore += 20; riskReasons.push('banned within last year')
     }
-    if (bansResult.economyBan !== 'none') { riskScore += 15; riskReasons.push('trade banned') }
+    if (b.economyBan !== 'none') { riskScore += 15; riskReasons.push('trade banned') }
   }
   if (cs2StatsResult.ok) {
-    if (cs2StatsResult.hsPct > 65)   { riskScore += 20; riskReasons.push(`high HS% (${cs2StatsResult.hsPct}%)`) }
-    if (cs2StatsResult.accuracy > 35) { riskScore += 15; riskReasons.push(`high accuracy (${cs2StatsResult.accuracy}%)`) }
-    if (cs2StatsResult.kd > 4)        { riskScore += 15; riskReasons.push(`very high K/D (${cs2StatsResult.kd})`) }
+    const s = cs2StatsResult as { ok: true; hsPct: number; accuracy: number; kd: number }
+    if (s.hsPct > 65)    { riskScore += 20; riskReasons.push(`high HS% (${s.hsPct}%)`) }
+    if (s.accuracy > 35) { riskScore += 15; riskReasons.push(`high accuracy (${s.accuracy}%)`) }
+    if (s.kd > 4)        { riskScore += 15; riskReasons.push(`very high K/D (${s.kd})`) }
   }
 
   let risk = 'low'
