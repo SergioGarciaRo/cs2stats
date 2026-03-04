@@ -134,11 +134,8 @@ interface ProfileData {
     tRating?: number | null
     gameCount?: number | null
     roundCount?: number | null
-    aimTop?: number | null
-    positioningTop?: number | null
-    utilityTop?: number | null
-    openingTop?: number | null
-    clutchTop?: number | null
+    premierElo?: number | null
+    recentMatches?: string[]
     reason?: string
   } | null
   cs2Stats?: { kills?: number; deaths?: number; kd?: number; hsPct?: number; accuracy?: number; winRate?: number; mvps?: number; matchesPlayed?: number; reason?: string } | null
