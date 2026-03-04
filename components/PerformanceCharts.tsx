@@ -51,7 +51,7 @@ function Tip({ active, payload, suffix = '' }: any) {
   return (
     <div style={ttStyle}>
       <div style={{ color: '#71717a', marginBottom: 2, fontSize: 11 }}>
-        {p.payload.map} · {p.payload.date}
+        {p.payload.map}
       </div>
       <div style={{ color: p.color, fontWeight: 700, fontSize: 14 }}>
         {typeof p.value === 'number' ? p.value.toFixed(suffix === '%' ? 0 : 2) : p.value}{suffix}
