@@ -72,6 +72,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 fontSize: 14, flexShrink: 0,
               }}>🎮</div>
               <span style={{ fontWeight: 800, fontSize: 15, color: '#fff', letterSpacing: '-0.01em' }}>CS2 Stats</span>
+              <span style={{
+                fontSize: 9, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase',
+                background: 'rgba(251,191,36,0.15)', border: '1px solid rgba(251,191,36,0.35)',
+                color: '#fbbf24', borderRadius: 4, padding: '2px 5px', lineHeight: 1,
+              }}>BETA</span>
             </a>
 
             <a href="/" className="nav-link">🔍 Search</a>
@@ -97,7 +102,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
             <div style={{ fontSize: 13, color: '#71717a', marginBottom: 16 }}>
               Every donation, no matter how small, keeps this project alive — thank you 🙏<br />
-              <span style={{ fontSize: 12, color: '#52525b' }}>seryi.garcia@gmail.com</span>
+              <span style={{ fontSize: 12, color: '#52525b' }}>cs2stats.support@gmail.com</span>
             </div>
             <DonateButton />
             <div style={{ marginTop: 16, fontSize: 11, color: '#52525b' }}>
@@ -115,13 +120,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <div style={{ fontSize: 13, color: '#52525b', marginBottom: 10 }}>
                 Interested in sponsorships, partnerships, or advertising on this platform?
               </div>
-              <a href="mailto:seryi.garcia@gmail.com" style={{
+              <a href="mailto:cs2stats.support@gmail.com" style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 padding: '8px 18px', borderRadius: 8,
                 background: 'rgba(125,211,252,0.08)', border: '1px solid rgba(125,211,252,0.15)',
                 color: '#7dd3fc', fontSize: 13, fontWeight: 600, textDecoration: 'none',
               }}>
-                ✉ seryi.garcia@gmail.com
+                ✉ cs2stats.support@gmail.com
               </a>
             </div>
 

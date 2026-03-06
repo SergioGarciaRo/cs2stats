@@ -88,7 +88,15 @@ export default function Home() {
               fontSize: 20,
             }}>🎮</div>
             <div>
-              <h1 className="home-title">CS2 Stats</h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h1 className="home-title" style={{ margin: 0 }}>CS2 Stats</h1>
+                <span style={{
+                  fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase',
+                  background: 'rgba(251,191,36,0.15)', border: '1px solid rgba(251,191,36,0.35)',
+                  color: '#fbbf24', borderRadius: 5, padding: '3px 7px', lineHeight: 1,
+                  alignSelf: 'center',
+                }}>BETA</span>
+              </div>
               <p className="home-subtitle" style={{ margin: 0 }}>Look up any CS2 player</p>
             </div>
           </div>
