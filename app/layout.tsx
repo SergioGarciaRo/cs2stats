@@ -1,5 +1,4 @@
 import './globals.css'
-import DonateButton from './DonateButton'
 import type { Metadata } from 'next'
 
 const SITE_URL = 'https://cs2stats-68cc.vercel.app'
@@ -97,15 +96,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           textAlign: 'center',
         }}>
           <div style={{ maxWidth: 600, margin: '0 auto' }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#a1a1aa', marginBottom: 6 }}>
-              Buy me a coffee ☕
-            </div>
-            <div style={{ fontSize: 13, color: '#71717a', marginBottom: 16 }}>
-              Every donation, no matter how small, keeps this project alive — thank you 🙏<br />
-              <span style={{ fontSize: 12, color: '#52525b' }}>cs2stats.support@gmail.com</span>
-            </div>
-            <DonateButton />
-            <div style={{ marginTop: 16, fontSize: 11, color: '#52525b' }}>
+            <div style={{ fontSize: 11, color: '#52525b' }}>
               CS2 Stats · Not affiliated with Valve or FACEIT · Data sourced from public APIs
             </div>
 
