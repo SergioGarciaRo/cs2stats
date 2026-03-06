@@ -445,39 +445,6 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {/* Inventario CS2 */}
-              {data.inventory && (
-                <div className="card" style={{ borderLeft: data.inventory.reason === 'private' ? undefined : '3px solid #f59e0b', opacity: data.inventory.reason === 'private' ? 0.6 : 1 }}>
-                  <div className="stat-label">CS2 Inventory</div>
-                  {data.inventory.reason === 'private' ? (
-                    <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>🔒 Private inventory</div>
-                  ) : (
-                    <>
-                      <div style={{ fontSize: 28, fontWeight: 800, color: '#f59e0b', marginTop: 8, lineHeight: 1 }}>
-                        {(data.inventory.approximateValueUSD ?? 0) > 0
-                          ? `$${data.inventory.approximateValueUSD!.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                          : '—'}
-                      </div>
-                      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                        {(data.inventory.approximateValueUSD ?? 0) > 0
-                          ? `approx. value${data.inventory.isPartial ? ' (top 10 items)' : ''}`
-                          : data.inventory.pricingFailed ? 'Pricing unavailable (rate limited)' : 'No marketable items'}
-                      </div>
-                      {data.inventory.totalItems != null && (
-                        <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 12, color: 'var(--muted)' }}>{data.inventory.totalItems} items total</span>
-                          {data.inventory.marketableItems != null && data.inventory.marketableItems > 0 && (
-                            <>
-                              <span style={{ fontSize: 12, color: 'var(--muted)' }}>·</span>
-                              <span style={{ fontSize: 12, color: 'var(--muted)' }}>{data.inventory.marketableItems} marketable</span>
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
             </div>
 
             {/* Columna derecha */}
