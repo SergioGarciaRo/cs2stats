@@ -29,7 +29,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const rawAvatar: string = typeof body.avatar === 'string' ? body.avatar : ''
   const safeAvatar = STEAM_AVATAR_RE.test(rawAvatar) ? rawAvatar : ''
 
-  const result = submitVote(id, safeName, safeAvatar, ip, vote)
+  const result = await submitVote(id, safeName, safeAvatar, ip, vote)
   if (!result.ok) {
     return NextResponse.json({ error: result.reason, yes: result.yes, no: result.no }, { status: 429 })
   }

@@ -244,13 +244,8 @@ async function getSkinportPrices(): Promise<Map<string, number>> {
   const now = Date.now();
   if (_skinportCache && now - _skinportCache.ts < 3_600_000) return _skinportCache.map;
 
-  const res = await fetch('https://api.skinport.com/v1/items?app_id=730&currency=USD', {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122 Safari/537.36',
-      'Accept-Encoding': 'gzip, deflate, br',
-      'Accept': 'application/json',
-    },
-  });
+  // Proxy through Edge runtime — Skinport requires Brotli which Node.js serverless can't decompress
+  const res = await fetch(`${siteBase()}/api/skinport-prices`);
   if (!res.ok) throw new Error(`skinport_${res.status}`);
 
   const items: Array<{ market_hash_name: string; min_price: number | null; suggested_price: number | null }> =
@@ -267,30 +262,54 @@ async function getSkinportPrices(): Promise<Map<string, number>> {
 
 // ─── CS2 Inventory Value ───────────────────────────────────────────────────
 
-// Resolves the base URL for self-calls (Edge proxy route)
+// Resolves the base URL for self-calls (Edge proxy routes)
 function siteBase() {
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+  // Prefer explicit canonical URL; avoid VERCEL_URL which is deployment-specific and may be protected
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
   return 'http://localhost:3000'
 }
 
 export async function fetchInventoryValue(steamId: string) {
   try {
-    // 1. Fetch inventory via Edge proxy (Cloudflare IPs — not blocked by Steam like AWS/Vercel are)
-    const res = await fetch(`${siteBase()}/api/inventory?steamId=${steamId}`);
-    if (!res.ok) return { ok: false, reason: `inv_proxy_${res.status}` };
+    const apiKey = process.env.STEAM_API_KEY;
 
-    const data = await res.json() as any;
-    if (data.error === 'private') return { ok: false, reason: 'private' };
-    if (data.error) return { ok: false, reason: data.error };
-    if (!data.descriptions) return { ok: false, reason: 'no_descriptions' };
+    let assets: any[];
+    let descriptions: any[];
+    let totalItems: number;
 
-    const totalItems: number = data.total_inventory_count ?? 0;
+    if (apiKey) {
+      // Use official Steam Web API — no IP restrictions, works from Vercel Node.js
+      const res = await fetch(
+        `https://api.steampowered.com/IEconService/GetInventoryItemsWithDescriptions/v1/?key=${apiKey}&steamid=${steamId}&appid=730&contextid=2&count=5000&get_descriptions=1`
+      );
+      if (res.status === 403) return { ok: false, reason: 'private' };
+      if (!res.ok) return { ok: false, reason: `steam_api_${res.status}` };
+      const json = await res.json() as any;
+      const r = json.response;
+      // success=15 means private inventory
+      if (!r || r.success === 15 || (!r.assets && !r.descriptions)) return { ok: false, reason: 'private' };
+      assets = r.assets ?? [];
+      descriptions = r.descriptions ?? [];
+      totalItems = r.total_inventory_count ?? 0;
+    } else {
+      // Fallback: Edge proxy (avoids Vercel Node.js IP block by Steam)
+      const res = await fetch(`${siteBase()}/api/inventory?steamId=${steamId}`);
+      if (!res.ok) return { ok: false, reason: `inv_proxy_${res.status}` };
+      const data = await res.json() as any;
+      if (data.error === 'private') return { ok: false, reason: 'private' };
+      if (data.error) return { ok: false, reason: data.error };
+      if (!data.descriptions) return { ok: false, reason: 'no_descriptions' };
+      assets = data.assets ?? [];
+      descriptions = data.descriptions ?? [];
+      totalItems = data.total_inventory_count ?? 0;
+    }
 
     // Build maps: classid_instanceid → market_hash_name, name → icon_url
     const descMap = new Map<string, string>();
     const iconMap = new Map<string, string>();
-    for (const d of data.descriptions) {
+    for (const d of descriptions) {
       if (d.marketable === 1 && d.market_hash_name) {
         descMap.set(`${d.classid}_${d.instanceid}`, d.market_hash_name);
         if (d.icon_url) iconMap.set(d.market_hash_name as string, d.icon_url as string);
@@ -299,12 +318,12 @@ export async function fetchInventoryValue(steamId: string) {
 
     // Count occurrences of each marketable item
     const itemCount = new Map<string, number>();
-    for (const asset of (data.assets ?? [])) {
+    for (const asset of assets) {
       const name = descMap.get(`${asset.classid}_${asset.instanceid}`);
       if (name) itemCount.set(name, (itemCount.get(name) ?? 0) + 1);
     }
 
-    // 2. Fetch bulk prices from Skinport (single request, no rate limit)
+    // 2. Fetch bulk prices from Skinport via Edge proxy (handles Brotli natively)
     let priceMap: Map<string, number>;
     try {
       priceMap = await getSkinportPrices();

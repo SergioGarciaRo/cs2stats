@@ -29,7 +29,7 @@ export async function GET(req: Request) {
       }
     )
 
-    if (res.status === 403) return j({ error: 'private' })
+    if (res.status === 403 || res.status === 400) return j({ error: 'private' })
     if (!res.ok) return j({ error: `steam_${res.status}` })
 
     const data = await res.json() as unknown

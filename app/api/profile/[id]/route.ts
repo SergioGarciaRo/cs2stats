@@ -20,8 +20,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const key = `profile:${id}`
   const cached = getCache(key)
   if (cached) {
-    recordView(id, cached.profile?.name || 'Unknown', cached.profile?.avatar || '')
-    return NextResponse.json({ ...cached, votes: getVotes(id) })
+    void recordView(id, cached.profile?.name || 'Unknown', cached.profile?.avatar || '')
+    const votes = await getVotes(id)
+    return NextResponse.json({ ...cached, votes })
   }
 
   // Fetch all data in parallel
@@ -122,7 +123,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 
   setCache(key, payload, 600)
-  recordView(id, profile.name || 'Unknown', profile.avatar || '')
+  void recordView(id, profile.name || 'Unknown', profile.avatar || '')
+  const votes = await getVotes(id)
 
-  return NextResponse.json({ ...payload, votes: getVotes(id) })
+  return NextResponse.json({ ...payload, votes })
 }
